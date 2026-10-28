@@ -136,7 +136,7 @@ export default function ExplorePage() {
                 creator={USER_BY_ID.get(activity.creatorId) ?? null}
                 locale={locale}
                 viewerVerified={viewerVerified}
-                shine
+                crown
               />
             ))}
           </div>

@@ -10,7 +10,7 @@ import { t } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 import { composeMatch } from "@/lib/engine";
 import { USER_BY_ID } from "@/lib/data/users";
-import { ArrowRight, Lock, MapPin, Users } from "lucide-react";
+import { ArrowRight, Crown, Lock, MapPin, Users } from "lucide-react";
 
 type Props = {
   activity: Activity;
@@ -19,11 +19,11 @@ type Props = {
   viewerVerified: boolean;
   own?: boolean;
   lead?: boolean;
-  shine?: boolean;
+  crown?: boolean;
 };
 
 
-export function PlanCard({ activity, creator, locale, viewerVerified, own = false, lead = false, shine = false }: Props) {
+export function PlanCard({ activity, creator, locale, viewerVerified, own = false, lead = false, crown = false }: Props) {
   const view = visibleActivityFor(activity, viewerVerified ? "verified" : "unverified");
   const sealed = view.sealed && !own;
   const area = view.areaId ? AREA_BY_ID.get(view.areaId) : null;
@@ -42,11 +42,21 @@ export function PlanCard({ activity, creator, locale, viewerVerified, own = fals
       return null;
     }
   }, [activity, creator, viewer]);
-  const tier = !shine || hostScore == null || hostScore < 70 ? "" : hostScore >= 90 ? " plan--rain" : " plan--shine";
+  const crowned = crown && hostScore != null && hostScore >= 90;
   return (
-    <article className={`card plan${sealed ? " sealed" : ""}${lead ? " plan--lead" : ""}${tier}`}>
+    <article className={`card plan${sealed ? " sealed" : ""}${lead ? " plan--lead" : ""}`}>
       <div className="row" style={{ justifyContent: "space-between" }}>
-        <span className="tag">{t(locale, `category.${view.category}`)}</span>
+        <span className="row" style={{ gap: "var(--space-xs)" }}>
+          <span className="tag">{t(locale, `category.${view.category}`)}</span>
+          {crowned && (
+            <span className="plan__crown" title={locale === "en" ? `Top match · ${hostScore}` : `Kecocokan tertinggi · ${hostScore}`}>
+              <Crown size={14} aria-hidden="true" />
+              <span className="visually-hidden">
+                {locale === "en" ? `Top match, score ${hostScore}` : `Kecocokan tertinggi, skor ${hostScore}`}
+              </span>
+            </span>
+          )}
+        </span>
         <span className="row" style={{ gap: "var(--space-2xs)" }}>
           {posted && <span className="tiny muted">{posted}</span>}
           <span className="tiny muted">
@@ -54,13 +64,6 @@ export function PlanCard({ activity, creator, locale, viewerVerified, own = fals
           </span>
         </span>
       </div>
-      {tier === " plan--rain" && (
-        <span className="plan__stars" aria-hidden="true">
-          {Array.from({ length: 14 }).map((_, i) => (
-            <i key={i} className={`plan__star plan__star--${(i % 5) + 1}`} />
-          ))}
-        </span>
-      )}
       <div className="plan__body">
         <p className="plan__desc">{view.description}</p>
         <div className="plan__meta">

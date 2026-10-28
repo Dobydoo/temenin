@@ -137,7 +137,7 @@ export default function HomePage() {
               creator={USER_BY_ID.get(activity.creatorId) ?? null}
               locale={locale}
               viewerVerified={viewerVerified}
-              shine
+              crown
             />
           ))}
         </div>
