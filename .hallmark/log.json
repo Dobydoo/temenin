@@ -1,0 +1,33 @@
+[
+ {
+  "shape": "App screen: sealed board + one wide plan",
+  "theme": "Temenin brand (by request)",
+  "axes": "light/rounded-sans/warm",
+  "hero": "none (app screen)",
+  "nav": "top bar with wordmark, links, language, mode, one action; bottom bar with centre create under 1024",
+  "footer": "colophon line",
+  "imagery": "none, the product is the material",
+  "photos": [],
+  "sections": [
+   "board header + viewer panel",
+   "own plan",
+   "sealed board",
+   "filters",
+   "create draft + rules",
+   "match list",
+   "match detail",
+   "chat + meetup card",
+   "feedback",
+   "safety center",
+   "profile"
+  ],
+  "signature": "the sealed card that opens in place when the viewer verifies",
+  "waived": [],
+  "prompt": "build the app in this folder following AGENT docs, assets for logo",
+  "scope": "app",
+  "genre": "playful",
+  "entry": "build",
+  "date": "2026-10-27",
+  "mode": "build"
+ }
+]

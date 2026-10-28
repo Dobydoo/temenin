@@ -1,0 +1,11 @@
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+.hallmark/shots/
+.hallmark/before/
+.env*
+!.env.example
+.DS_Store
