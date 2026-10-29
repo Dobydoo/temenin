@@ -15,10 +15,39 @@ type Props = {
 
 const MBTI_TYPES = ["INTJ", "INTP", "ENTJ", "ENTP", "INFJ", "INFP", "ENFJ", "ENFP", "ISTJ", "ISFJ", "ESTJ", "ESFJ", "ISTP", "ISFP", "ESTP", "ESFP"];
 
+function RulePriority({
+  required,
+  disabled,
+  onChange,
+  locale,
+  requiredLabel,
+}: {
+  required: boolean;
+  disabled?: boolean;
+  onChange: (value: boolean) => void;
+  locale: Locale;
+  requiredLabel: string;
+}) {
+  return (
+    <span className="selectwrap">
+      <select
+        className="select select--sm rulepriority"
+        value={required ? "required" : "plus"}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value === "required")}
+        aria-label={requiredLabel}
+      >
+        <option value="plus">{t(locale, "create.plus")}</option>
+        <option value="required">{requiredLabel}</option>
+      </select>
+      <ChevronDown size={16} aria-hidden="true" />
+    </span>
+  );
+}
+
 export function RulesEditor({ rules, locale, onChange, fromPreference = false }: Props) {
   const requiredUsed = requiredFieldCount(rules);
   const limitReached = requiredUsed >= 2;
-  const ruleToggle = (key: "required" | "hardFilter", value: boolean) => value;
 
   return (
     <section className="card stack" aria-labelledby="rules-heading">
@@ -31,15 +60,13 @@ export function RulesEditor({ rules, locale, onChange, fromPreference = false }:
       <div className="rulefield">
         <div className="rulefield__head">
           <span className="rulefield__label">{t(locale, "field.chatLevel")}</span>
-          <button
-            type="button"
-            className="toggle"
-            aria-pressed={rules.chatLevel.required}
+          <RulePriority
+            required={rules.chatLevel.required}
             disabled={!rules.chatLevel.required && limitReached}
-            onClick={() => onChange({ ...rules, chatLevel: { ...rules.chatLevel, required: ruleToggle("required", !rules.chatLevel.required) } })}
-          >
-            {rules.chatLevel.required ? t(locale, "create.required") : t(locale, "create.plus")}
-          </button>
+            onChange={(value) => onChange({ ...rules, chatLevel: { ...rules.chatLevel, required: value } })}
+            locale={locale}
+            requiredLabel={t(locale, "create.required")}
+          />
         </div>
         <div className="chips">
           {(["quiet", "moderate", "chatty"] as ChatLevel[]).map((level) => (
@@ -59,14 +86,12 @@ export function RulesEditor({ rules, locale, onChange, fromPreference = false }:
       <div className="rulefield">
         <div className="rulefield__head">
           <span className="rulefield__label">{t(locale, "field.gender")}</span>
-          <button
-            type="button"
-            className="toggle"
-            aria-pressed={rules.gender.hardFilter}
-            onClick={() => onChange({ ...rules, gender: { ...rules.gender, hardFilter: !rules.gender.hardFilter } })}
-          >
-            {rules.gender.hardFilter ? t(locale, "create.required") : t(locale, "create.plus")}
-          </button>
+          <RulePriority
+            required={rules.gender.hardFilter}
+            onChange={(value) => onChange({ ...rules, gender: { ...rules.gender, hardFilter: value } })}
+            locale={locale}
+            requiredLabel={t(locale, "create.required")}
+          />
         </div>
         <div className="chips">
           {(["any", "female", "male"] as GenderPreference[]).map((value) => (
@@ -91,15 +116,13 @@ export function RulesEditor({ rules, locale, onChange, fromPreference = false }:
       <div className="rulefield">
         <div className="rulefield__head">
           <span className="rulefield__label">{t(locale, "field.interest")}</span>
-          <button
-            type="button"
-            className="toggle"
-            aria-pressed={rules.interest.required}
+          <RulePriority
+            required={rules.interest.required}
             disabled={!rules.interest.required && limitReached}
-            onClick={() => onChange({ ...rules, interest: { ...rules.interest, required: !rules.interest.required } })}
-          >
-            {rules.interest.required ? t(locale, "create.required") : t(locale, "create.plus")}
-          </button>
+            onChange={(value) => onChange({ ...rules, interest: { ...rules.interest, required: value } })}
+            locale={locale}
+            requiredLabel={t(locale, "create.required")}
+          />
         </div>
         <div className="chips">
           {INTERESTS.map((interest) => (
@@ -119,15 +142,13 @@ export function RulesEditor({ rules, locale, onChange, fromPreference = false }:
       <div className="rulefield">
         <div className="rulefield__head">
           <span className="rulefield__label">{t(locale, "field.mode")}</span>
-          <button
-            type="button"
-            className="toggle"
-            aria-pressed={rules.mode.required}
+          <RulePriority
+            required={rules.mode.required}
             disabled={!rules.mode.required && limitReached}
-            onClick={() => onChange({ ...rules, mode: { ...rules.mode, required: !rules.mode.required } })}
-          >
-            {rules.mode.required ? t(locale, "create.required") : t(locale, "create.plus")}
-          </button>
+            onChange={(value) => onChange({ ...rules, mode: { ...rules.mode, required: value } })}
+            locale={locale}
+            requiredLabel={t(locale, "create.required")}
+          />
         </div>
         <div className="chips">
           {(["one_on_one", "small_group", "any"] as MatchMode[]).map((mode) => (
@@ -147,15 +168,13 @@ export function RulesEditor({ rules, locale, onChange, fromPreference = false }:
       <div className="rulefield">
         <div className="rulefield__head">
           <span className="rulefield__label">{t(locale, "field.mbti")}</span>
-          <button
-            type="button"
-            className="toggle"
-            aria-pressed={rules.mbti.required}
+          <RulePriority
+            required={rules.mbti.required}
             disabled={!rules.mbti.required && limitReached}
-            onClick={() => onChange({ ...rules, mbti: { ...rules.mbti, required: !rules.mbti.required } })}
-          >
-            {rules.mbti.required ? t(locale, "create.required") : t(locale, "create.plus")}
-          </button>
+            onChange={(value) => onChange({ ...rules, mbti: { ...rules.mbti, required: value } })}
+            locale={locale}
+            requiredLabel={t(locale, "create.required")}
+          />
         </div>
         <div className="chips">
           {(["any", "same", "specific"] as MbtiPreferenceMode[]).map((mode) => (
@@ -198,14 +217,12 @@ export function RulesEditor({ rules, locale, onChange, fromPreference = false }:
       <div className="rulefield">
         <div className="rulefield__head">
           <span className="rulefield__label">{t(locale, "field.radius")}</span>
-          <button
-            type="button"
-            className="toggle"
-            aria-pressed={rules.radius.hardFilter}
-            onClick={() => onChange({ ...rules, radius: { ...rules.radius, hardFilter: !rules.radius.hardFilter } })}
-          >
-            {rules.radius.hardFilter ? t(locale, "radius.hardFilter") : t(locale, "create.plus")}
-          </button>
+          <RulePriority
+            required={rules.radius.hardFilter}
+            onChange={(value) => onChange({ ...rules, radius: { ...rules.radius, hardFilter: value } })}
+            locale={locale}
+            requiredLabel={t(locale, "radius.hardFilter")}
+          />
         </div>
         <div className="chips">
           {(["own_area", "km5", "km10", "km25", "jabodetabek"] as RadiusOption[]).map((value) => (

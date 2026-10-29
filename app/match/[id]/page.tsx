@@ -25,11 +25,9 @@ function RequestButton({ activityId, pickLabel }: { activityId: string; pickLabe
     }));
   };
   return (
-    <div className="row" style={{ justifyContent: "flex-end", marginBlockStart: "var(--space-md)" }}>
-      <button type="button" className="btn btn--sm" onClick={ask}>
-        {pickLabel}
-      </button>
-    </div>
+    <button type="button" className="btn" onClick={ask}>
+      {pickLabel}
+    </button>
   );
 }
 
@@ -102,7 +100,7 @@ function RequestRow({
         <span className="avatar" aria-hidden="true">
           {(isHost || isMe ? user?.avatarInitials : `#${index + 1}`) ?? "?"}
         </span>
-        <span className="stack" style={{ gap: 0 }}>
+        <span className="stack" style={{ gap: 0, flex: 1, alignItems: "center", textAlign: "center" }}>
           <strong>{isHost || isMe ? user?.name : `${t(locale, "match.censored")} ${index + 1}`}</strong>
           {approved ? (
             <span className="tag tag--verified">{t(locale, "match.approved")}</span>
@@ -185,45 +183,29 @@ export default function MatchListPage() {
 
   return (
     <>
-      <div className="pagehead">
-        <div className="pagehead__text">
-          <h1>{activity.description}</h1>
-          <p className="lead">{activity.description}</p>
-          <div className="row small muted">
-            <span className="tag tag--plain">
-              {area?.name}, {area?.city}
-            </span>
-            <time dateTime={activity.startsAt}>{formatDate(activity.startsAt, locale)}</time>
-            <span>
-              {activity.budgetMin.toLocaleString("id-ID")} to {activity.budgetMax.toLocaleString("id-ID")} IDR
-            </span>
-          </div>
-        </div>
-        {myScore && !mine && (
-          <Link className="btn btn--quiet" href={`/match/${activity.id}/detail?candidate=${posterUser.id}`}>
-            {t(locale, "match.breakdown")}
-          </Link>
-        )}
-      </div>
-
-      <article className="card plan--lead">
-        <div className="row" style={{ alignItems: "flex-start", justifyContent: "space-between" }}>
-          <div className="row" style={{ gap: "var(--space-md)", alignItems: "flex-start" }}>
-            <span className="avatar avatar--lg" aria-hidden="true">
-              {posterUser.avatarInitials}
-            </span>
-            <div className="stack" style={{ gap: "var(--space-2xs)" }}>
-              <span className="tiny muted">{t(locale, "match.hostedBy")}</span>
-              <span className="row">
-                <strong>{posterUser.name}</strong>
-                <VerifiedBadge user={posterUser} locale={locale} />
+      <nav className="tiny muted" aria-label="Breadcrumb" style={{ marginBlockEnd: "var(--space-sm)" }}>
+        <Link href="/explore">{t(locale, "nav.explore")}</Link>
+        {" / "}
+        <span aria-current="page">{activity.description.slice(0, 32)}{activity.description.length > 32 ? "…" : ""}</span>
+      </nav>
+      <div className="matchgrid">
+        <div className="pagehead matchgrid__plan">
+          <div className="pagehead__text">
+            <span className="row" style={{ gap: "var(--space-xs)" }}>
+              <span className="tag">{t(locale, `category.${activity.category}`)}</span>
+              <span className="tag tag--plain">
+                {area?.name}, {area?.city}
               </span>
-              <span className="small muted">
-                {posterUser.mbti ?? (locale === "en" ? "Blank" : "Kosong")}, {posterUser.activitiesCompleted}{" "}
-                {locale === "en" ? "plans done" : "rencana selesai"}, {posterUser.reliability}% {locale === "en" ? "showed up" : "datang"}
+            </span>
+            <h1>{activity.description}</h1>
+            <div className="row small muted">
+              <time dateTime={activity.startsAt}>{formatDate(activity.startsAt, locale)}</time>
+              <span aria-hidden="true">·</span>
+              <span>
+                {activity.budgetMin.toLocaleString("id-ID")}–{activity.budgetMax.toLocaleString("id-ID")} IDR
               </span>
-              <span className="small">{posterUser.bio[locale]}</span>
-              <span className="row tiny muted">
+              <span aria-hidden="true">·</span>
+              <span>
                 {group
                   ? locale === "en"
                     ? `${approvedCount} out of ${spots} joined`
@@ -234,23 +216,60 @@ export default function MatchListPage() {
               </span>
             </div>
           </div>
-          {myScore && !mine && (
-            <div className="stack" style={{ alignItems: "center", gap: "var(--space-2xs)" }}>
-              <ScoreRing value={myScore.total} locale={locale} />
-              <span className="tiny muted">{t(locale, "match.yourScore")}</span>
-            </div>
-          )}
         </div>
-        {!mine && !myReq && !full && <RequestButton activityId={activity.id} pickLabel={t(locale, "match.pick")} />}
-        {!mine && myReq && !myApproved && (
-          <p className="note" style={{ marginBlockStart: "var(--space-md)" }}>{t(locale, "match.waitingAuthor")}</p>
-        )}
-      </article>
 
-      <h2 className="section__head" style={{ marginBlockStart: "var(--space-xl)" }}>
-        {t(locale, "match.requests")} ({liveIds.length})
-      </h2>
-      <p className="small muted">{group ? t(locale, "match.needMore") : t(locale, "match.needOne")}</p>
+        <article className="card host matchgrid__host">
+          <div className="stack host__who">
+            <span className="row" style={{ gap: "var(--space-sm)", alignItems: "flex-start" }}>
+              <span className="avatar avatar--lg" aria-hidden="true">
+                {posterUser.avatarInitials}
+              </span>
+              <span className="stack" style={{ gap: 0, flex: 1, minWidth: 0 }}>
+                <span className="tiny muted">{t(locale, "match.hostedBy")}</span>
+                <strong>{posterUser.name}</strong>
+                <span style={{ alignSelf: "flex-start" }}>
+                  <VerifiedBadge user={posterUser} locale={locale} />
+                </span>
+              </span>
+              {myScore && !mine && (
+                <Link
+                  className="host__score"
+                  href={`/match/${activity.id}/detail?candidate=${posterUser.id}`}
+                  title={t(locale, "match.yourScore")}
+                  aria-label={`${t(locale, "match.yourScore")}: ${myScore.total}. ${t(locale, "match.breakdown")}`}
+                >
+                  <ScoreRing value={myScore.total} locale={locale} />
+                </Link>
+              )}
+            </span>
+            <span className="small muted">
+              {posterUser.mbti ?? (locale === "en" ? "Blank" : "Kosong")}, {posterUser.activitiesCompleted}{" "}
+              {locale === "en" ? "plans done" : "rencana selesai"}, {posterUser.reliability}% {locale === "en" ? "showed up" : "datang"}
+            </span>
+            <span className="small">{posterUser.bio[locale]}</span>
+            <span className="host__cta">
+              {!mine && !myReq && !full && <RequestButton activityId={activity.id} pickLabel={t(locale, "match.pick")} />}
+              {!mine && myReq && !myApproved && (
+                <span className="note">{t(locale, "match.waitingAuthor")}</span>
+              )}
+              {!mine && full && (
+                <span className="tag tag--plain">{t(locale, "match.full")}</span>
+              )}
+              {mine && (
+                <span className="tag tag--accent">{t(locale, "board.yourPlan")}</span>
+              )}
+            </span>
+          </div>
+        </article>
+      </div>
+
+      <section className="section section--tight">
+        <div className="section__head">
+          <h2>
+            {t(locale, "match.requests")} ({liveIds.length})
+          </h2>
+          <span className="tiny muted">{group ? t(locale, "match.needMore") : t(locale, "match.needOne")}</span>
+        </div>
 
       {liveIds.length === 0 ? (
         <div className="well stack">
@@ -274,7 +293,7 @@ export default function MatchListPage() {
           ))}
         </ul>
       )}
-
+      </section>
     </>
   );
 }

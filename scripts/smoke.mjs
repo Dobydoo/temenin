@@ -34,15 +34,12 @@ await page.goto(`${base}/`, { waitUntil: "networkidle0" });
 const unsealed = await page.$$eval(".plan:not(.sealed)", (els) => els.length);
 step("unsealed after verify", String(unsealed));
 
-// create activity from free text
+// create activity from a single sentence; the form auto-detects the rest
 await page.goto(`${base}/create`, { waitUntil: "networkidle0" });
-await page.type("#free-text", "Sabtu sore mau nonton di Tebet, budget 100 ribuan, pengen teman yang asik diajak ngobrol setelah film.");
-await page.evaluate(() => {
-  [...document.querySelectorAll("button")].find((b) => /read my sentence/i.test(b.textContent || ""))?.click();
-});
+await page.type("#description", "Sabtu sore mau nonton di Tebet, budget 100 ribuan, pengen teman yang asik diajak ngobrol setelah film.");
 await new Promise((r) => setTimeout(r, 300));
-const draftRows = await page.$$eval(".well .rows > span", (els) => els.map((e) => e.textContent?.replace(/\s+/g, " ").trim()));
-step("parsed draft", draftRows.join(" / "));
+const detected = await page.$eval("p.tiny.muted[aria-live]", (el) => el.textContent?.replace(/\s+/g, " ").trim());
+step("auto-detected", detected ?? "");
 
 // a board card must lead somewhere: the product's main loop
 await page.goto(`${base}/`, { waitUntil: "networkidle0" });

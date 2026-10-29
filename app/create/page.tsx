@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { t } from "@/lib/i18n";
 import { parseFreeText } from "@/lib/engine";
@@ -23,7 +23,6 @@ export default function CreatePage() {
   const { state, update, viewer } = useStore();
   const router = useRouter();
   const locale = state.locale;
-  const [text, setText] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<Category>("movie");
   const [areaId, setAreaId] = useState(state.profile.areaId);
@@ -32,37 +31,37 @@ export default function CreatePage() {
   const [partySize, setPartySize] = useState(2);
   const [rules, setRules] = useState<ActivityRules>(() => state.savedRules ?? emptyRules());
   const [remember, setRemember] = useState(!state.savedRules);
-  const [parsed, setParsed] = useState(false);
-  const fromPreference = Boolean(state.savedRules) && !parsed;
+  // Fields the user picked by hand; auto-detect never overwrites these.
+  const [touched, setTouched] = useState({ category: false, area: false, budget: false, chat: false });
+  const fromPreference = Boolean(state.savedRules);
 
-  const preview = parseFreeText(text);
-
-  const handleParse = () => {
-    if (!text.trim()) return;
-    setDescription(text.trim());
-    setCategory(preview.category);
-    setAreaId(preview.areaId ?? areaId);
-    setBudget(preview.budgetMax);
-    setRules((current) => ({ ...current, chatLevel: { ...current.chatLevel, value: preview.chatLevel } }));
-    setParsed(true);
+  const detected = parseFreeText(description);
+  const touch = (key: keyof typeof touched) => setTouched((current) => (current[key] ? current : { ...current, [key]: true }));
+  const autoCategory = touched.category ? category : description.trim() ? detected.category : category;
+  const autoAreaId = touched.area ? areaId : (description.trim() && detected.areaId ? detected.areaId : areaId);
+  const autoBudget = touched.budget ? budget : description.trim() ? detected.budgetMax : budget;
+  const displayRules =
+    touched.chat || !description.trim() ? rules : { ...rules, chatLevel: { ...rules.chatLevel, value: detected.chatLevel } };
+  const handleRulesChange = (next: ActivityRules) => {
+    if (next.chatLevel.value !== displayRules.chatLevel.value) touch("chat");
+    setRules(next);
   };
-
   const post = () => {
     const activity: Activity = {
       id: `a-${Date.now()}`,
       creatorId: viewer.id,
-      category,
-      description: description.trim() || text.trim(),
+      category: autoCategory,
+      description: description.trim(),
       startsAt: new Date(startsAt).toISOString(),
       createdAt: new Date().toISOString(),
-      areaId,
+      areaId: autoAreaId,
       venueName: null,
-      budgetMin: Math.round(budget * 0.7),
-      budgetMax: budget,
+      budgetMin: Math.round(autoBudget * 0.7),
+      budgetMax: autoBudget,
       partySize,
-      source: text.trim() && parsed ? "free_text" : "form",
+      source: "form",
       status: "open",
-      rules,
+      rules: displayRules,
     };
     update((current) => ({
       activities: [activity, ...current.activities],
@@ -71,7 +70,7 @@ export default function CreatePage() {
     router.push(`/match/${activity.id}`);
   };
 
-  const disabled = !description.trim() && !text.trim();
+  const disabled = !description.trim();
 
   return (
     <>
@@ -89,62 +88,50 @@ export default function CreatePage() {
       <div className="split">
         <div className="stack sticky">
           <section className="card stack">
-            <FieldShell label={t(locale, "create.freeTextLabel")} help={t(locale, "create.freeTextHelp")} htmlFor="free-text">
+            <h3>{locale === "en" ? "Plan details" : "Detail rencana"}</h3>
+            <FieldShell
+              label={t(locale, "field.notes")}
+              htmlFor="description"
+              help={locale === "en" ? "Mention the place, budget, or vibe — the form fills itself." : "Sebut tempat, budget, atau vibe — formnya terisi sendiri."}
+            >
               <textarea
-                id="free-text"
+                id="description"
                 className="textarea"
-                value={text}
-                onChange={(event) => setText(event.target.value)}
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
                 placeholder={locale === "en" ? "Saturday afternoon, a film in Tebet, about 100k" : "Sabtu sore mau nonton di Tebet, budget 100 ribuan"}
-                rows={4}
+                rows={3}
               />
             </FieldShell>
-            <button type="button" className="btn btn--accent" onClick={handleParse} disabled={!text.trim()}>
-              <Sparkles size={18} aria-hidden="true" />
-              {t(locale, "create.parse")}
-            </button>
-            {text.trim() && (
-              <div className="well stack" aria-live="polite">
-                <strong className="small">{t(locale, "create.preview")}</strong>
-                <div className="rows">
-                  <span>
-                    <span className="muted">{t(locale, "field.category")}</span>
-                    <span>{t(locale, `category.${preview.category}`)}</span>
-                  </span>
-                  <span>
-                    <span className="muted">{t(locale, "field.area")}</span>
-                    <span>{preview.areaId ? AREAS.find((area) => area.id === preview.areaId)?.name : "?"}</span>
-                  </span>
-                  <span>
-                    <span className="muted">{t(locale, "field.when")}</span>
-                    <span>{preview.dayHint || "?"}</span>
-                  </span>
-                  <span>
-                    <span className="muted">{t(locale, "field.chatLevel")}</span>
-                    <span>{t(locale, `chat.${preview.chatLevel}`)}</span>
-                  </span>
-                </div>
-                {preview.missing.length > 0 && (
-                  <p className="small muted">
-                    {locale === "en"
-                      ? `Temenin could not read the ${preview.missing.join(" and ")}. Pick it by hand below.`
-                      : `Temenin belum kebaca ${preview.missing.join(" dan ")}. Pilih manual di bawah.`}
-                  </p>
-                )}
-              </div>
+            {description.trim() && (
+              <p className="tiny muted" aria-live="polite">
+                {locale === "en" ? "Detected: " : "Terbaca: "}
+                {t(locale, `category.${autoCategory}`)}
+                {detected.areaId ? ` · ${AREAS.find((area) => area.id === autoAreaId)?.name}` : ""}
+                {` · ${t(locale, `chat.${displayRules.chatLevel.value}`)}`}
+                {` · Rp ${autoBudget.toLocaleString("id-ID")}`}
+              </p>
             )}
-          </section>
-
-          <section className="card stack">
-            <h3>{locale === "en" ? "Plan details" : "Detail rencana"}</h3>
-            <FieldShell label={t(locale, "field.notes")} htmlFor="description">
-              <textarea id="description" className="textarea" value={description} onChange={(event) => setDescription(event.target.value)} rows={3} />
-            </FieldShell>
             <FieldShell label={t(locale, "field.category")}>
-              <CategoryChips value={category} onChange={setCategory} locale={locale} />
+              <CategoryChips
+                value={autoCategory}
+                onChange={(value) => {
+                  touch("category");
+                  setCategory(value);
+                }}
+                locale={locale}
+              />
             </FieldShell>
             <FieldShell label={t(locale, "field.area")} htmlFor="area">
-              <Select id="area" label={t(locale, "field.area")} value={areaId} onChange={setAreaId}>
+              <Select
+                id="area"
+                label={t(locale, "field.area")}
+                value={autoAreaId}
+                onChange={(value) => {
+                  touch("area");
+                  setAreaId(value);
+                }}
+              >
                 {AREAS.map((area) => (
                   <option key={area.id} value={area.id}>
                     {area.name}, {area.city}
@@ -170,9 +157,10 @@ export default function CreatePage() {
                   type="text"
                   inputMode="numeric"
                   autoComplete="off"
-                  value={budget.toLocaleString("id-ID")}
+                  value={autoBudget.toLocaleString("id-ID")}
                   onChange={(event) => {
                     const digits = event.target.value.replace(/\D/g, "");
+                    touch("budget");
                     setBudget(digits ? Number(digits) : 0);
                   }}
                 />
@@ -207,7 +195,7 @@ export default function CreatePage() {
         </div>
 
         <div className="stack">
-          <RulesEditor rules={rules} locale={locale} onChange={setRules} fromPreference={fromPreference} />
+          <RulesEditor rules={displayRules} locale={locale} onChange={handleRulesChange} fromPreference={fromPreference} />
           <label className="check">
             <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />
             <span className="check__text">

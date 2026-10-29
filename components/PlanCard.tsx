@@ -47,7 +47,7 @@ export function PlanCard({ activity, creator, locale, viewerVerified, own = fals
     <article className={`card plan${sealed ? " sealed" : ""}${lead ? " plan--lead" : ""}`}>
       <div className="row" style={{ justifyContent: "space-between" }}>
         <span className="row" style={{ gap: "var(--space-xs)" }}>
-          <span className="tag">{t(locale, `category.${view.category}`)}</span>
+          {own && <span className="tag tag--accent">{t(locale, "board.yourPlan")}</span>}
           {crowned && (
             <span className="plan__crown" title={locale === "en" ? `Top match · ${hostScore}` : `Kecocokan tertinggi · ${hostScore}`}>
               <Crown size={14} aria-hidden="true" />
@@ -57,7 +57,7 @@ export function PlanCard({ activity, creator, locale, viewerVerified, own = fals
             </span>
           )}
         </span>
-        <span className="row" style={{ gap: "var(--space-2xs)" }}>
+        <span className="row" style={{ flexDirection: "column", alignItems: "flex-end", gap: 0 }}>
           {posted && <span className="tiny muted">{posted}</span>}
           <span className="tiny muted">
             {locale === "en" ? `${joined} out of ${spots} joined` : `${joined} dari ${spots} gabung`}

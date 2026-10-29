@@ -73,55 +73,67 @@ export default function ExplorePage() {
         </div>
       </div>
 
-      <section className="card stack" aria-label={locale === "en" ? "Filters" : "Filter"}>
-        <div className="row" style={{ gap: "var(--space-md)" }}>
-          <div className="chips">
-            <button type="button" className="chip" aria-pressed={category === "all"} onClick={() => setCategory("all")}>
-              {locale === "en" ? "All" : "Semua"}
-            </button>
-            {CATEGORIES.map((item) => (
-              <button key={item} type="button" className="chip" aria-pressed={category === item} onClick={() => setCategory(item)}>
-                {t(locale, `category.${item}`)}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="row" style={{ gap: "var(--space-md)" }}>
-          <div className="chips">
-            <button type="button" className="chip" aria-pressed={zone === "all"} onClick={() => setZone("all")}>
-              {locale === "en" ? "Any zone" : "Semua zona"}
-            </button>
-            {["jaksel", "jakpus", "jakbar", "jakut", "jaktim", "depok", "tangerang", "bekasi"].map((item) => (
-              <button key={item} type="button" className="chip" aria-pressed={zone === item} onClick={() => setZone(item)}>
-                {item}
-              </button>
-            ))}
-          </div>
-          <label className="check">
-            <input type="checkbox" checked={onlyVerified} onChange={(event) => setOnlyVerified(event.target.checked)} />
-            <span>{locale === "en" ? "Verified hosts only" : "Hanya pemosting terverifikasi"}</span>
-          </label>
+      <section className="card filters" aria-label={locale === "en" ? "Filters" : "Filter"}>
+        <div className="row filters__row">
+          <span className="selectwrap">
+            <select
+              className="select select--sm"
+              value={category}
+              onChange={(event) => setCategory(event.target.value as Category | "all")}
+              aria-label={locale === "en" ? "Category" : "Kategori"}
+            >
+              <option value="all">{locale === "en" ? "All" : "Semua"}</option>
+              {CATEGORIES.map((item) => (
+                <option key={item} value={item}>
+                  {t(locale, `category.${item}`)}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={16} aria-hidden="true" />
+          </span>
+          <span className="selectwrap">
+            <select
+              className="select select--sm"
+              value={zone}
+              onChange={(event) => setZone(event.target.value)}
+              aria-label={locale === "en" ? "Zone" : "Zona"}
+            >
+              <option value="all">{locale === "en" ? "Any zone" : "Semua zona"}</option>
+              {["jaksel", "jakpus", "jakbar", "jakut", "jaktim", "depok", "tangerang", "bekasi"].map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={16} aria-hidden="true" />
+          </span>
+          <button
+            type="button"
+            className="chip chip--sm"
+            aria-pressed={onlyVerified}
+            onClick={() => setOnlyVerified((value) => !value)}
+          >
+            {locale === "en" ? "Verified hosts" : "Terverifikasi"}
+          </button>
+          <span className="selectwrap filters__sort">
+            <select
+              className="select select--sm"
+              value={sort}
+              onChange={(event) => setSort(event.target.value as "match" | "newest")}
+              aria-label={t(locale, "home.sort")}
+            >
+              <option value="match">{t(locale, "home.sortMatch")}</option>
+              <option value="newest">{t(locale, "home.sortNewest")}</option>
+            </select>
+            <ChevronDown size={16} aria-hidden="true" />
+          </span>
         </div>
       </section>
 
       <section className="section section--tight">
         <div className="section__head">
           <h2>{filtered.length} {locale === "en" ? "plans" : "rencana"}</h2>
-          <span className="row" style={{ gap: "var(--space-sm)" }}>
-            <span className="tiny muted">{locale === "en" ? `${PERSONAS.length} demo buddies` : `${PERSONAS.length} temen demo`}</span>
-            <span className="selectwrap">
-              <select
-                className="select select--sm"
-                value={sort}
-                onChange={(event) => setSort(event.target.value as "match" | "newest")}
-                aria-label={t(locale, "home.sort")}
-              >
-                <option value="match">{t(locale, "home.sortMatch")}</option>
-                <option value="newest">{t(locale, "home.sortNewest")}</option>
-              </select>
-              <ChevronDown size={16} aria-hidden="true" />
-            </span>
-          </span>
+          <span className="tiny muted">{locale === "en" ? `${PERSONAS.length} demo buddies` : `${PERSONAS.length} temen demo`}</span>
         </div>
         {filtered.length === 0 ? (
           <div className="well stack">
@@ -136,6 +148,7 @@ export default function ExplorePage() {
                 creator={USER_BY_ID.get(activity.creatorId) ?? null}
                 locale={locale}
                 viewerVerified={viewerVerified}
+                own={activity.creatorId === viewerId}
                 crown
               />
             ))}
