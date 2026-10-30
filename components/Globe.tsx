@@ -86,7 +86,8 @@ export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom i
     const wrapRect = wrap.getBoundingClientRect();
     const R = canvasRect.width / 2 - 8;
     const Re = R * zoom;
-    if (!p || Math.hypot(p.x * Re, p.y * Re) > R) {
+    const Rd = R * Math.min(zoom, 1);
+    if (!p || Math.hypot(p.x * Re, p.y * Re) > Rd) {
       el.style.display = "none";
       return;
     }
@@ -231,11 +232,13 @@ export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom i
     const px = event.clientX - rect.left - rect.width / 2;
     const py = event.clientY - rect.top - rect.height / 2;
     const R = (rect.width / 2 - 8) * s.zoom;
+    const Rd = (rect.width / 2 - 8) * Math.min(s.zoom, 1);
     let best: GlobePin | null = null;
     let bestDist = 18;
     for (const pin of pinsRef.current) {
       const p = project(pin.lat, pin.lng, s.rotX, s.rotY);
       if (!p) continue;
+      if (Math.hypot(p.x * R, p.y * R) > Rd) continue;
       const dist = Math.hypot(p.x * R - px, -p.y * R - py);
       if (dist < bestDist) {
         bestDist = dist;
@@ -314,12 +317,15 @@ function draw(
 ) {
   const R = size / 2 - 8;
   const Re = R * zoom;
+  // The disc shrinks on zoom-out but stays full on zoom-in, so the globe
+  // is always round: zooming in magnifies the map inside the fixed disc.
+  const Rd = R * Math.min(zoom, 1);
   const cx = size / 2;
   const cy = size / 2;
   ctx.clearRect(0, 0, size, size);
 
   // Opaque ocean, sized by zoom so the whole globe scales as one.
-  const ocean = ctx.createRadialGradient(cx - Re * 0.3, cy - Re * 0.3, Re * 0.1, cx, cy, Re);
+  const ocean = ctx.createRadialGradient(cx - Rd * 0.3, cy - Rd * 0.3, Rd * 0.1, cx, cy, Rd);
   if (dark) {
     ocean.addColorStop(0, "#55688f");
     ocean.addColorStop(1, "#2b3a63");
@@ -328,13 +334,13 @@ function draw(
     ocean.addColorStop(1, "#2c3e68");
   }
   ctx.beginPath();
-  ctx.arc(cx, cy, Re, 0, Math.PI * 2);
+  ctx.arc(cx, cy, Rd, 0, Math.PI * 2);
   ctx.fillStyle = ocean;
   ctx.fill();
 
   ctx.save();
   ctx.beginPath();
-  ctx.arc(cx, cy, Re, 0, Math.PI * 2);
+  ctx.arc(cx, cy, Rd, 0, Math.PI * 2);
   ctx.clip();
 
   ctx.strokeStyle = dark ? "rgba(255,246,220,0.22)" : "rgba(255,246,220,0.25)";
@@ -378,7 +384,7 @@ function draw(
     for (const [lat, lng] of dots) {
       const p = project(lat, lng, rotX, rotY);
       if (!p) continue;
-      if (Math.hypot(p.x * Re, p.y * Re) > Re) continue;
+      if (Math.hypot(p.x * Re, p.y * Re) > Rd) continue;
       ctx.fillRect(cx + p.x * Re - half, cy - p.y * Re - half, half * 2, half * 2);
     }
   }
@@ -387,7 +393,7 @@ function draw(
   for (const pin of pins) {
     const p = project(pin.lat, pin.lng, rotX, rotY);
     if (!p) continue;
-    if (Math.hypot(p.x * Re, p.y * Re) > Re) continue;
+    if (Math.hypot(p.x * Re, p.y * Re) > Rd) continue;
     const X = cx + p.x * Re;
     const Y = cy - p.y * Re;
     const r = 4 + (pin.score / max) * 6;
@@ -410,7 +416,7 @@ function draw(
   }
   if (userLoc) {
     const p = project(userLoc.lat, userLoc.lng, rotX, rotY);
-    if (p && Math.hypot(p.x * Re, p.y * Re) <= Re) {
+    if (p && Math.hypot(p.x * Re, p.y * Re) <= Rd) {
       const X = cx + p.x * Re;
       const Y = cy - p.y * Re;
       ctx.beginPath();
@@ -433,7 +439,7 @@ function draw(
   ctx.restore();
 
   ctx.beginPath();
-  ctx.arc(cx, cy, Re, 0, Math.PI * 2);
+  ctx.arc(cx, cy, Rd, 0, Math.PI * 2);
   ctx.strokeStyle = dark ? "rgba(255,246,220,0.5)" : "rgba(44,62,104,0.55)";
   ctx.lineWidth = 1.5;
   ctx.stroke();
