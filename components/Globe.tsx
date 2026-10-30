@@ -49,7 +49,7 @@ export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom i
   const popupRef = useRef<HTMLDivElement>(null);
   const [dots, setDots] = useState<[number, number][] | null>(null);
   const [zoom, setZoom] = useState(1);
-  const live = useRef({ rotX: rad(-106), rotY: rad(18), dragging: false, moved: 0, lastX: 0, lastY: 0, zoom: 1, pinch: new Map<number, { x: number; y: number }>(), pinchDist: 0 });
+  const live = useRef({ rotX: rad(-106), rotY: rad(18), dragging: false, moved: 0, lastX: 0, lastY: 0, zoom: 1, pinch: new Map<number, { x: number; y: number }>(), pinchDist: 0, lastTouch: 0 });
   const pinsRef = useRef(pins);
   const selectRef = useRef(onSelect);
   const selectedRef = useRef(selectedId);
@@ -130,13 +130,15 @@ export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom i
       event.preventDefault();
       const s = live.current;
       s.zoom = clampZoom(s.zoom * Math.exp(-event.deltaY * 0.0012));
+      s.lastTouch = performance.now();
       setZoom(s.zoom);
     };
     canvas.addEventListener("wheel", onWheel, { passive: false });
 
     const frame = () => {
       const s = live.current;
-      if (!s.dragging && !motion.matches) s.rotX += 0.0016;
+      // Slow spin that pauses while the user interacts and resumes after ~2.5s idle.
+      if (!s.dragging && s.pinch.size === 0 && !motion.matches && performance.now() - s.lastTouch > 2500) s.rotX += 0.0008;
       draw(ctx, size, s.rotX, s.rotY, dots, pinsRef.current, selectedRef.current, s.zoom, darkMode.matches);
       positionPopup(s.rotX, s.rotY, s.zoom);
       raf = requestAnimationFrame(frame);
@@ -158,6 +160,7 @@ export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom i
 
   const onPointerDown = (event: React.PointerEvent) => {
     const s = live.current;
+    s.lastTouch = performance.now();
     s.pinch.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (s.pinch.size === 2) {
       const pts = [...s.pinch.values()];
@@ -175,6 +178,7 @@ export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom i
   };
   const onPointerMove = (event: React.PointerEvent) => {
     const s = live.current;
+    if (s.dragging || s.pinch.size > 0) s.lastTouch = performance.now();
     if (s.pinch.has(event.pointerId)) s.pinch.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (s.pinch.size === 2) {
       const pts = [...s.pinch.values()];
@@ -200,6 +204,7 @@ export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom i
   };
   const endPointer = (event: React.PointerEvent) => {
     const s = live.current;
+    s.lastTouch = performance.now();
     s.pinch.delete(event.pointerId);
     if (s.pinch.size < 2) s.pinchDist = 0;
     if (s.pinch.size > 0) return;

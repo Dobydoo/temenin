@@ -12,7 +12,7 @@ import { Globe } from "@/components/Globe";
 export default function TrendingPage() {
   const { state } = useStore();
   const locale = state.locale;
-  const [spotId, setSpotId] = useState<string | null>("jakarta");
+  const [spotId, setSpotId] = useState<string | null>(null);
 
   const scores = useMemo(
     () => trendingScores(state.activities, state.joins, state.authorReviews),
