@@ -184,6 +184,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .btn:disabled, .btn[aria-disabled="true"] { opacity: 0.55; cursor: not-allowed; transform: none; }
 .btn--quiet { background: transparent; color: var(--color-ink); border-color: var(--color-field); }
 .btn--quiet:hover { background: var(--color-paper-2); }
+.followbtn { background: transparent; color: var(--color-ink); border: 1px solid var(--color-ink); }
+.followbtn:hover, .followbtn:focus-visible { background: color-mix(in oklab, var(--color-error) 14%, transparent); border-color: var(--color-error); color: var(--color-error); }
+.followbtn__unfollow { display: none; }
+.followbtn:hover .followbtn__label, .followbtn:focus-visible .followbtn__label { display: none; }
+.followbtn:hover .followbtn__unfollow, .followbtn:focus-visible .followbtn__unfollow { display: inline; }
 .btn--accent { background: var(--color-signal); color: var(--color-signal-ink); border-color: var(--color-signal); }
 .btn--accent:hover { background: color-mix(in oklab, var(--color-signal) 82%, var(--color-ink)); }
 .btn--sm { min-height: 40px; padding-inline: var(--space-md); font-size: var(--text-sm); }

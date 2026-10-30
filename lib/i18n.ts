@@ -53,6 +53,7 @@ export const DICT: Dict = {
   "feed.empty": { en: "Nothing here yet. Follow buddies or post your first moment.", id: "Belum ada apa-apa. Ikuti temen atau posting momen pertamamu." },
   "feed.follow": { en: "Follow", id: "Ikuti" },
   "feed.followingBtn": { en: "Following", id: "Mengikuti" },
+  "feed.unfollow": { en: "Unfollow", id: "Batal ikuti" },
   "feed.membersOnly": { en: "Members only", id: "Khusus anggota" },
   "feed.aboutPlan": { en: "About this plan", id: "Tentang rencana ini" },
   "feed.title": { en: "Timeline", id: "Linimasa" },

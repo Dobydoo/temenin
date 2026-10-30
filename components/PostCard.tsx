@@ -56,11 +56,19 @@ export function PostCard({ post, author, activity, locale }: Props) {
         {!isOwn && author && (
           <button
             type="button"
-            className="btn btn--quiet btn--sm"
+            className={following ? "btn btn--sm followbtn" : "btn btn--accent btn--sm"}
             aria-pressed={following}
+            aria-label={following ? t(locale, "feed.unfollow") : t(locale, "feed.follow")}
             onClick={toggleFollow}
           >
-            {following ? t(locale, "feed.followingBtn") : t(locale, "feed.follow")}
+            {following ? (
+              <>
+                <span className="followbtn__label">✓ {t(locale, "feed.followingBtn")}</span>
+                <span className="followbtn__unfollow" aria-hidden="true">{t(locale, "feed.unfollow")}</span>
+              </>
+            ) : (
+              t(locale, "feed.follow")
+            )}
           </button>
         )}
       </div>
