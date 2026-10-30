@@ -264,7 +264,7 @@ export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom i
       {popup && (
         <div
           ref={popupRef}
-          style={{ display: "none", position: "absolute", left: 0, top: 0, transform: "translate(-50%, calc(-100% - 14px))", zIndex: 3, width: "max-content", maxWidth: "min(240px, 70vw)" }}
+          style={{ display: "none", position: "absolute", left: 0, top: 0, transform: "translate(-50%, calc(-100% - 14px))", zIndex: 3, width: "max-content", maxWidth: "min(264px, 72vw)" }}
         >
           <div className="card" style={{ padding: "var(--space-xs) var(--space-sm)", position: "relative" }}>
             {onClosePopup && (

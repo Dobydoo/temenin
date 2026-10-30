@@ -41,25 +41,46 @@ export default function TrendingPage() {
     }));
   }, [top]);
 
-  const topPlan = spotId === "jakarta" ? state.activities.find((plan) => plan.id === top[0]?.activityId) ?? null : null;
+  const topEntry = spotId === "jakarta" ? top[0] ?? null : null;
+  const topPlan = topEntry ? state.activities.find((plan) => plan.id === topEntry.activityId) ?? null : null;
 
   const popup = spot ? (
     <div className="stack" style={{ gap: "var(--space-3xs)" }}>
       <strong>
         {spot.name} · {spot.region}
       </strong>
-      <p className="tiny muted" style={{ display: "flex", alignItems: "center", gap: 4 } as React.CSSProperties}>
-        <Flame size={12} aria-hidden="true" />{" "}
-        {spotId === "jakarta"
-          ? `${top.length} ${t(locale, "trending.joins")}`
-          : spotTrend
-            ? `${spotTrend.joins7d} ${t(locale, "trending.joins")}`
-            : t(locale, "trending.quiet")}
-      </p>
-      {topPlan && (
-        <Link className="chip" href={`/match/${topPlan.id}`} style={{ textDecoration: "none", textAlign: "center" }}>
-          {t(locale, "action.seeMatches")} →
-        </Link>
+      {topPlan && topEntry ? (
+        <>
+          <span className="chip" style={{ alignSelf: "flex-start" }}>
+            {t(locale, `category.${topPlan.category}`)}
+          </span>
+          <p className="tiny" style={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", margin: 0 }}>
+            {topPlan.description}
+          </p>
+          <p className="tiny muted" style={{ display: "flex", alignItems: "center", gap: 4, margin: 0 }}>
+            <Flame size={12} aria-hidden="true" /> {topEntry.facts.joins} {t(locale, "trending.joins")}
+            {topEntry.facts.authorAvg != null && <> · ★ {topEntry.facts.authorAvg}</>}
+          </p>
+          <Link className="chip" href={`/match/${topPlan.id}`} style={{ textDecoration: "none", textAlign: "center" }}>
+            {t(locale, "action.seeMatches")} →
+          </Link>
+        </>
+      ) : (
+        <>
+          {spotTrend && (
+            <span className="chip" style={{ alignSelf: "flex-start" }}>
+              {t(locale, `category.${spotTrend.category}`)}
+            </span>
+          )}
+          <p className="tiny" style={{ margin: 0 }}>
+            {spotTrend ? spotTrend.text[locale] : t(locale, "trending.quiet")}
+          </p>
+          {spotTrend && (
+            <p className="tiny muted" style={{ display: "flex", alignItems: "center", gap: 4, margin: 0 }}>
+              <Flame size={12} aria-hidden="true" /> {spotTrend.joins7d} {t(locale, "trending.joins")}
+            </p>
+          )}
+        </>
       )}
     </div>
   ) : null;
