@@ -12,3 +12,20 @@ export const SPOTS: Spot[] = [
 ];
 
 export const SPOT_BY_ID = new Map(SPOTS.map((spot) => [spot.id, spot]));
+
+export type SpotTrend = {
+  spotId: string;
+  joins7d: number;
+  category: string;
+  text: { en: string; id: string };
+};
+
+export const SPOT_TRENDS: SpotTrend[] = [
+  { spotId: "bandung", joins7d: 34, category: "coffee", text: { en: "Ngopi sore is peaking in Dago", id: "Ngopi sore lagi rame di Dago" } },
+  { spotId: "surabaya", joins7d: 27, category: "food", text: { en: "Late-night kuliner runs in Tunjungan", id: "Kuliner malam di Tunjungan" } },
+  { spotId: "denpasar", joins7d: 41, category: "sports", text: { en: "Sunrise surf (+ coffee after) in Canggu", id: "Surfing sunrise (+ ngopi) di Canggu" } },
+  { spotId: "medan", joins7d: 12, category: "food", text: { en: "Durian season meetups", id: "Kumpul musim durian" } },
+  { spotId: "makassar", joins7d: 9, category: "coffee", text: { en: "Losari sunset hangs", id: "Nongkrong sunset Losari" } },
+  { spotId: "singapore", joins7d: 22, category: "movie", text: { en: "Weekend cinema + hawker crawls", id: "Bioskop weekend + hawker" } },
+  { spotId: "kl", joins7d: 15, category: "shopping", text: { en: "Bukit Bintang thrift walks", id: "Thrift walk Bukit Bintang" } },
+];

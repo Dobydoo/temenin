@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useStore } from "@/lib/store";
@@ -70,6 +71,11 @@ export default function ExplorePage() {
               ? "Every plan is a specific activity. Read the description, then check who fits."
               : "Tiap rencana adalah aktivitas spesifik. Baca deskripsinya, lalu cek siapa yang cocok."}
           </p>
+          <div className="row">
+            <Link className="btn btn--quiet btn--sm" href="/trending">
+              {t(locale, "trending.title")}
+            </Link>
+          </div>
         </div>
       </div>
 
