@@ -9,6 +9,7 @@ import { USER_BY_ID } from "@/lib/data/users";
 import { AREA_BY_ID } from "@/lib/data/areas";
 import { PlanCard } from "@/components/PlanCard";
 import { PostCard } from "@/components/PostCard";
+import { Composer } from "@/components/Composer";
 import { visiblePosts } from "@/lib/social";
 
 export default function HomePage() {
@@ -88,6 +89,9 @@ export default function HomePage() {
         )}
       </div>
 
+      <section className="card stack" style={{ marginBlockEnd: "var(--space-xl)" }}>
+        <Composer locale={locale} activityId={null} areaId={viewer.areaId} allowVisibility={false} titleKey="composer.moment" bodyKey="recap.body" />
+      </section>
       <section className="section">
         <div className="section__head">
           <h2>{t(locale, "feed.title")}</h2>

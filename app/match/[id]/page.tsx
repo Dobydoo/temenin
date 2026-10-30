@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ShieldAlert } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { t } from "@/lib/i18n";
@@ -11,6 +11,7 @@ import { PERSONAS, USER_BY_ID } from "@/lib/data/users";
 import { AREA_BY_ID } from "@/lib/data/areas";
 import { formatDate } from "@/lib/format";
 import { ScoreRing, VerifiedBadge } from "@/components/ui";
+import { AfterPlan } from "@/components/AfterPlan";
 
 function RequestButton({ activityId, pickLabel }: { activityId: string; pickLabel: string }) {
   const { update, viewer } = useStore();
@@ -53,6 +54,7 @@ function RequestRow({
   locale: "en" | "id";
 }) {
   const { state, update } = useStore();
+  const [now] = useState(() => Date.now());
   const confirms = state.confirms[activityId] ?? [];
   const confirmed = confirms.includes(requesterId);
   const isMe = requesterId === viewerId;
@@ -75,7 +77,7 @@ function RequestRow({
     }));
   };
   const inWindow = (() => {
-    const ms = new Date(startsAt).getTime() - Date.now();
+    const ms = new Date(startsAt).getTime() - now;
     return Number.isFinite(ms) && ms > 24 * 3600 * 1000;
   })();
   const drop = (block: boolean) => {
@@ -294,6 +296,7 @@ export default function MatchListPage() {
         </ul>
       )}
       </section>
+      <AfterPlan activity={activity} locale={locale} />
     </>
   );
 }
