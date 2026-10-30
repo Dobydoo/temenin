@@ -318,8 +318,8 @@ function draw(
   const cy = size / 2;
   ctx.clearRect(0, 0, size, size);
 
-  // Opaque ocean so the disc never washes into the page background.
-  const ocean = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.3, R * 0.1, cx, cy, R);
+  // Opaque ocean, sized by zoom so the whole globe scales as one.
+  const ocean = ctx.createRadialGradient(cx - Re * 0.3, cy - Re * 0.3, Re * 0.1, cx, cy, Re);
   if (dark) {
     ocean.addColorStop(0, "#55688f");
     ocean.addColorStop(1, "#2b3a63");
@@ -328,13 +328,13 @@ function draw(
     ocean.addColorStop(1, "#2c3e68");
   }
   ctx.beginPath();
-  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.arc(cx, cy, Re, 0, Math.PI * 2);
   ctx.fillStyle = ocean;
   ctx.fill();
 
   ctx.save();
   ctx.beginPath();
-  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.arc(cx, cy, Re, 0, Math.PI * 2);
   ctx.clip();
 
   ctx.strokeStyle = dark ? "rgba(255,246,220,0.22)" : "rgba(255,246,220,0.25)";
@@ -378,7 +378,7 @@ function draw(
     for (const [lat, lng] of dots) {
       const p = project(lat, lng, rotX, rotY);
       if (!p) continue;
-      if (Math.hypot(p.x * Re, p.y * Re) > R) continue;
+      if (Math.hypot(p.x * Re, p.y * Re) > Re) continue;
       ctx.fillRect(cx + p.x * Re - half, cy - p.y * Re - half, half * 2, half * 2);
     }
   }
@@ -387,7 +387,7 @@ function draw(
   for (const pin of pins) {
     const p = project(pin.lat, pin.lng, rotX, rotY);
     if (!p) continue;
-    if (Math.hypot(p.x * Re, p.y * Re) > R) continue;
+    if (Math.hypot(p.x * Re, p.y * Re) > Re) continue;
     const X = cx + p.x * Re;
     const Y = cy - p.y * Re;
     const r = 4 + (pin.score / max) * 6;
@@ -410,7 +410,7 @@ function draw(
   }
   if (userLoc) {
     const p = project(userLoc.lat, userLoc.lng, rotX, rotY);
-    if (p && Math.hypot(p.x * Re, p.y * Re) <= R) {
+    if (p && Math.hypot(p.x * Re, p.y * Re) <= Re) {
       const X = cx + p.x * Re;
       const Y = cy - p.y * Re;
       ctx.beginPath();
@@ -433,7 +433,7 @@ function draw(
   ctx.restore();
 
   ctx.beginPath();
-  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.arc(cx, cy, Re, 0, Math.PI * 2);
   ctx.strokeStyle = dark ? "rgba(255,246,220,0.5)" : "rgba(44,62,104,0.55)";
   ctx.lineWidth = 1.5;
   ctx.stroke();
