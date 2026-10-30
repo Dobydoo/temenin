@@ -3,10 +3,10 @@
 // Usage: node scripts/generate-globe-dots.mjs
 import { writeFile } from "node:fs/promises";
 
-const URL = "https://unpkg.com/world-atlas@2/countries-110m.json";
+const ATLAS_URL = "https://unpkg.com/world-atlas@2/countries-110m.json";
 const STEP = 1.6;
 
-const res = await fetch(URL);
+const res = await fetch(ATLAS_URL);
 if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
 const topo = await res.json();
 
