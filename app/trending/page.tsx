@@ -13,16 +13,11 @@ export default function TrendingPage() {
   const { state } = useStore();
   const locale = state.locale;
   const [spotId, setSpotId] = useState<string | null>(null);
-  const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
-
-  const locateMe = () => {
-    if (!("geolocation" in navigator)) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => {},
-      { timeout: 8000 },
-    );
-  };
+  // Seeded demo location (Jakarta HQ persona). Real GPS comes after the hackathon.
+  const userLoc = useMemo(() => {
+    const jakarta = SPOT_BY_ID.get("jakarta");
+    return jakarta ? { lat: jakarta.lat, lng: jakarta.lng } : null;
+  }, []);
 
   const scores = useMemo(
     () => trendingScores(state.activities, state.joins, state.authorReviews),
@@ -90,8 +85,6 @@ export default function TrendingPage() {
         onClosePopup={() => setSpotId(null)}
         userLoc={userLoc}
         userLabel={t(locale, "trending.you")}
-        onLocate={locateMe}
-        locateLabel={t(locale, "trending.locateMe")}
       />
       <p className="tiny muted" style={{ textAlign: "center" }}>{t(locale, "trending.demo")}</p>
     </>

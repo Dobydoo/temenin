@@ -361,8 +361,8 @@ function draw(
 
   if (dots) {
     // Cream dots vanish on the light theme, so land adapts to the color scheme.
-    ctx.fillStyle = dark ? "rgba(255,246,220,0.75)" : "rgba(46,110,66,0.9)";
-    const half = dark ? 0.75 : 1;
+    ctx.fillStyle = dark ? "rgba(255,246,220,0.8)" : "#2e7d4e";
+    const half = dark ? 1 : 1.25;
     for (const [lat, lng] of dots) {
       const p = project(lat, lng, rotX, rotY);
       if (!p) continue;

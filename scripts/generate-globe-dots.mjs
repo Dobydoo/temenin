@@ -1,10 +1,10 @@
-// One-time script: fetch world-atlas 110m land, sample a dot grid, write public/land-dots.json.
+// One-time script: fetch world-atlas 50m land, sample a dot grid, write public/land-dots.json.
 // Needs network ONCE. The committed output keeps the app offline afterwards.
 // Usage: node scripts/generate-globe-dots.mjs
 import { writeFile } from "node:fs/promises";
 
-const ATLAS_URL = "https://unpkg.com/world-atlas@2/countries-110m.json";
-const STEP = 1.6;
+const ATLAS_URL = "https://unpkg.com/world-atlas@2/countries-50m.json";
+const STEP = 1.0;
 
 const res = await fetch(ATLAS_URL);
 if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
