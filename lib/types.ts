@@ -222,6 +222,7 @@ export type Song = {
 export type Photo = {
   id: string;
   label: string;
+  src: string;
   gradient: string;
   moods: Mood[];
 };

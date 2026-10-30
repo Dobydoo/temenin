@@ -68,14 +68,13 @@ export function PostCard({ post, author, activity, locale }: Props) {
       <p className="plan__desc" style={{ textAlign: "start" }}>{post.body}</p>
 
       {photo && (
-        <div
+        <img
           className="post__photo"
+          src={photo.src}
+          alt={photo.label}
+          loading="lazy"
           style={{ background: photo.gradient }}
-          role="img"
-          aria-label={photo.label}
-        >
-          <span>{photo.label}</span>
-        </div>
+        />
       )}
 
       {song && (

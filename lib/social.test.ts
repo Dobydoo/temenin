@@ -29,7 +29,7 @@ test("visiblePosts hides members-only recaps from outsiders", () => {
 });
 
 test("suggestSongs ranks shared moods first", () => {
-  const photo: Photo = { id: "ph-1", label: "Night gig", gradient: "a", moods: ["hype", "cozy"] };
+  const photo: Photo = { id: "ph-1", label: "Night gig", src: "/photos/gig.jpg", gradient: "a", moods: ["hype", "cozy"] };
   const songs: Song[] = [
     { id: "s-1", title: "Calm", artist: "X", moods: ["cozy"] },
     { id: "s-2", title: "Loud", artist: "Y", moods: ["hype", "cozy"] },
