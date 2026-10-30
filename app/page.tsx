@@ -2,32 +2,23 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ArrowRight, ChevronDown, ShieldCheck } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { t } from "@/lib/i18n";
-import { PERSONAS } from "@/lib/data/users";
 import { USER_BY_ID } from "@/lib/data/users";
+import { AREA_BY_ID } from "@/lib/data/areas";
 import { PlanCard } from "@/components/PlanCard";
-import { composeMatch } from "@/lib/engine";
-
-function fullLast<T extends { id: string; partySize: number }>(list: T[], joins: Record<string, string[]>) {
-  const isFull = (a: T) => (joins[a.id]?.length ?? 0) >= Math.max(a.partySize - 1, 1);
-  return [...list].sort((a, b) => Number(isFull(a)) - Number(isFull(b)));
-}
-
-const postedTime = (activity: { startsAt: string; createdAt?: string }) => {
-  const created = activity.createdAt ? Date.parse(activity.createdAt) : Number.NaN;
-  return Number.isNaN(created) ? Date.parse(activity.startsAt) : created;
-};
+import { PostCard } from "@/components/PostCard";
+import { visiblePosts } from "@/lib/social";
 
 export default function HomePage() {
   const { state, viewer } = useStore();
   const locale = state.locale;
   const viewerVerified = state.verification === "verified";
   const [showAllMine, setShowAllMine] = useState(false);
-  const [sort, setSort] = useState<"match" | "newest">("match");
+  const [tab, setTab] = useState<"foryou" | "following" | "nearby">("foryou");
+  const [now] = useState(() => Date.now());
   const myPlans = useMemo(() => {
-    const now = Date.now();
     const upcoming: typeof state.activities = [];
     const past: typeof state.activities = [];
     for (const activity of state.activities) {
@@ -39,31 +30,21 @@ export default function HomePage() {
     upcoming.sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
     past.sort((a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt));
     return [...upcoming, ...past];
-  }, [state.activities, viewer.id]);
+  }, [state, viewer.id, now]);
   const nearestMine = myPlans[0] ?? null;
-  const others = useMemo(() => {
-    const base = fullLast(
-      state.activities.filter((activity) => {
-        if (activity.creatorId === viewer.id) return false;
-        if ((state.removed[activity.id] ?? []).includes(viewer.id)) return false;
-        if ((state.blocked[viewer.id] ?? []).includes(activity.creatorId)) return false;
-        return true;
-      }),
-      state.joins,
-    );
-    if (sort === "newest") return [...base].sort((a, b) => postedTime(b) - postedTime(a));
-    // Most match: best host score first, full plans sink via fullLast above.
-    const scoreOf = (activity: (typeof base)[number]) => {
-      try {
-        const host = USER_BY_ID.get(activity.creatorId) ?? null;
-        if (!host) return -1;
-        return composeMatch(activity, viewer, host).total;
-      } catch {
-        return -1;
-      }
-    };
-    return [...base].sort((a, b) => scoreOf(b) - scoreOf(a));
-  }, [state.activities, state.joins, state.removed, state.blocked, viewer, sort]);
+  const feed = useMemo(() => {
+    const seen = visiblePosts(state.posts, viewer.id, state.joins).filter((post) => {
+      if ((state.blocked[viewer.id] ?? []).includes(post.authorId)) return false;
+      return true;
+    });
+    const newest = [...seen].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+    if (tab === "following") return newest.filter((post) => state.following.includes(post.authorId));
+    if (tab === "nearby") {
+      const zone = AREA_BY_ID.get(viewer.areaId)?.zone;
+      return newest.filter((post) => AREA_BY_ID.get(post.areaId)?.zone === zone);
+    }
+    return newest;
+  }, [state.posts, state.joins, state.blocked, state.following, viewer.id, viewer.areaId, tab]);
 
   return (
     <>
@@ -109,40 +90,35 @@ export default function HomePage() {
 
       <section className="section">
         <div className="section__head">
-          <h2>{t(locale, "home.boardTitle")}</h2>
-          <span className="row" style={{ gap: "var(--space-sm)" }}>
-            <span className="board__count">
-              <ShieldCheck size={14} aria-hidden="true" />
-              {locale === "en" ? `${PERSONAS.length} demo buddies in Jabodetabek` : `${PERSONAS.length} temen demo di Jabodetabek`}
-            </span>
-            <span className="selectwrap">
-              <select
-                className="select select--sm"
-                value={sort}
-                onChange={(event) => setSort(event.target.value as "match" | "newest")}
-                aria-label={t(locale, "home.sort")}
+          <h2>{t(locale, "feed.title")}</h2>
+          <div className="chips" role="tablist" aria-label={t(locale, "feed.title")}>
+            {(["foryou", "following", "nearby"] as const).map((key) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={tab === key}
+                className="chip"
+                onClick={() => setTab(key)}
               >
-                <option value="match">{t(locale, "home.sortMatch")}</option>
-                <option value="newest">{t(locale, "home.sortNewest")}</option>
-              </select>
-              <ChevronDown size={16} aria-hidden="true" />
-            </span>
-          </span>
+                {t(locale, `feed.${key}`)}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="board">
-          {others.slice(0, 20).map((activity) => (
-            <PlanCard
-              key={activity.id}
-              activity={activity}
-              creator={USER_BY_ID.get(activity.creatorId) ?? null}
+          {feed.slice(0, 20).map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              author={USER_BY_ID.get(post.authorId) ?? null}
+              activity={state.activities.find((item) => item.id === post.activityId) ?? null}
               locale={locale}
-              viewerVerified={viewerVerified}
-              crown
             />
           ))}
         </div>
-        {others.length === 0 && <p className="muted">{t(locale, "board.empty")}</p>}
-        {others.length > 20 && (
+        {feed.length === 0 && <p className="muted">{t(locale, "feed.empty")}</p>}
+        {feed.length > 20 && (
           <div className="board__more">
             <Link className="btn btn--quiet" href="/explore">
               {t(locale, "home.showMore")}

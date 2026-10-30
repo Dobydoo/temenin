@@ -277,6 +277,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .table tbody td:nth-last-child(1) { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
 }
 
+.post__photo { display: grid; place-items: center; min-height: 160px; margin-block-start: var(--space-sm); border-radius: var(--radius-well); color: #fff6dc; font-weight: 700; text-shadow: 0 1px 8px rgb(0 0 0 / 0.35); }
 .plan__foot { display: flex; align-items: center; justify-content: center; gap: var(--space-sm); flex-wrap: wrap; margin-block-start: auto; padding-block-start: var(--space-xs); text-align: center; }
 .plan__crown { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #fbbf24; color: #2c3e68; border: 2px solid var(--color-card); box-shadow: 0 4px 12px -4px rgb(66 91 154 / 0.45); }
 .matchgrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-md); align-items: start; margin-block-end: var(--space-md); }
