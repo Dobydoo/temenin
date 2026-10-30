@@ -1,6 +1,6 @@
 # Social Timeline Rework — Design Doc
 
-> Status: proposed · approach A (full simulated social) picked 2026-10-30 · needs partner approval before any build.
+> Status: approved with globe amendment 2026-10-30 · approach A (full simulated social). Map section changed from SVG area plot to rotatable canvas globe, trending by state/country demo spots.
 
 ## Intent / why
 
@@ -24,7 +24,7 @@ is the thing judges click through. Everything stays a front-end-only demo (seede
 
 - No backend, accounts, uploads, audio playback, push, or real ML/API calls.
 - Song "auto-detect" is a mood-tag match, never claimed as recognition.
-- Map is a keyless SVG plot of area centers, not real map tiles.
+- Globe is a keyless canvas with precomputed land dots, not real map tiles; geography is demo spots, not exhaustive.
 - Failure = anything needing a key, network, or persistence beyond `localStorage`.
 
 ## Constraints
@@ -55,6 +55,9 @@ is the thing judges click through. Everything stays a front-end-only demo (seede
 - `Song { id, title, artist, moods: Mood[] }` seed catalog (~12 tracks, en/id titles as-is, no audio files).
 - `Photo { id, label, gradient (CSS), moods: Mood[] }` seed set (~8) standing in for uploads; `Mood = "chill" | "hype" | "cozy" | "focus" | "romantic" | "blue"`.
 - `profile.aboutMe: string` (single user-written field, not translated — my call).
+- `Spot { id, name, region, country, lat, lng }` demo geography (~10 spots: Jakarta, Bandung, Surabaya,
+  Denpasar, Medan, Makassar + Singapore, Kuala Lumpur) so the globe has pins beyond Jabodetabek.
+  Existing `Area`s map to the Jakarta spot. All demo data, labeled as such.
 - Seed ~15 posts across personas/areas/visibilities + a few author reviews so the timeline, trending, and map are alive on first load.
 
 ### 2. Home timeline (`app/page.tsx`, new `components/PostCard.tsx`, `components/Composer.tsx`)
@@ -82,10 +85,17 @@ is the thing judges click through. Everything stays a front-end-only demo (seede
 - Seeded `SONGS` catalog; attaching = card with title/artist/mood tag (no playback — non-goal).
 - Choosing a photo surfaces "Suggested for this photo" songs sorted by shared moods; user can still browse all.
 
-### 7. Trending + map (`app/explore/page.tsx` extension or new `app/trending/page.tsx` — builder's call, prefer new route)
+### 7. Trending + rotatable globe (new `app/trending/page.tsx`)
 
-- Score per plan: joins velocity + recency + category popularity in zone + author rating. Show "why trending" line (e.g. "5 joins in 2 days in Kemang").
-- Zone switcher (own area vs. other zones); map = SVG scatter of `AREAS` lat/lng with count bubbles, keyless.
+- Score per plan: joins velocity + recency + category popularity in spot + author rating. Scores aggregate
+  per `Spot`; "why trending" line per spot (e.g. "5 joins in 2 days in Bandung").
+- Spot switcher: own spot first, then other states/countries. Selecting a spot filters the trending list.
+- Globe: keyless canvas dot-globe, orthographic projection hand-rolled (no new deps). Drag to rotate,
+  gentle auto-spin, honors `prefers-reduced-motion`. Pins sized/colored by trending score; clicking a pin
+  selects the spot. Land dots come from committed `lib/data/land-dots.json`, generated once by
+  `scripts/generate-globe-dots.mjs` (fetches world-atlas 110m land, samples dot grid — the one step that
+  needs network; run once, commit output, app stays offline). If dots are missing, globe falls back to
+  graticule sphere + pins (still fully usable).
 
 ### 8. About me (`app/you/page.tsx`)
 
