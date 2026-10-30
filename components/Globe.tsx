@@ -116,7 +116,12 @@ export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom i
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const darkMode = window.matchMedia("(prefers-color-scheme: dark)");
+    const osDark = window.matchMedia("(prefers-color-scheme: dark)");
+    // The app theme can be toggled in-app via data-mode, which overrides the OS scheme.
+    const isDark = () => {
+      const mode = document.documentElement.getAttribute("data-mode") ?? (osDark.matches ? "dark" : "light");
+      return mode === "dark";
+    };
     let raf = 0;
     let size = 0;
 
@@ -147,7 +152,7 @@ export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom i
       const s = live.current;
       // Slow spin that pauses while the user interacts and resumes after ~2.5s idle.
       if (!s.dragging && s.pinch.size === 0 && !motion.matches && performance.now() - s.lastTouch > 2500) s.rotX += 0.0008 / s.zoom;
-      draw(ctx, size, s.rotX, s.rotY, dots, pinsRef.current, selectedRef.current, s.zoom, darkMode.matches, userLocRef.current, userLabelRef.current);
+      draw(ctx, size, s.rotX, s.rotY, dots, pinsRef.current, selectedRef.current, s.zoom, isDark(), userLocRef.current, userLabelRef.current);
       positionPopup(s.rotX, s.rotY, s.zoom);
       raf = requestAnimationFrame(frame);
     };
@@ -313,9 +318,15 @@ function draw(
   const cy = size / 2;
   ctx.clearRect(0, 0, size, size);
 
+  // Opaque ocean so the disc never washes into the page background.
   const ocean = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.3, R * 0.1, cx, cy, R);
-  ocean.addColorStop(0, "rgba(118,192,236,0.35)");
-  ocean.addColorStop(1, "rgba(66,91,154,0.35)");
+  if (dark) {
+    ocean.addColorStop(0, "#55688f");
+    ocean.addColorStop(1, "#2b3a63");
+  } else {
+    ocean.addColorStop(0, "#4c6bab");
+    ocean.addColorStop(1, "#2c3e68");
+  }
   ctx.beginPath();
   ctx.arc(cx, cy, R, 0, Math.PI * 2);
   ctx.fillStyle = ocean;
@@ -326,7 +337,7 @@ function draw(
   ctx.arc(cx, cy, R, 0, Math.PI * 2);
   ctx.clip();
 
-  ctx.strokeStyle = dark ? "rgba(255,246,220,0.28)" : "rgba(46,90,120,0.30)";
+  ctx.strokeStyle = dark ? "rgba(255,246,220,0.22)" : "rgba(255,246,220,0.25)";
   ctx.lineWidth = 1;
   for (let lng = -180; lng < 180; lng += 20) {
     ctx.beginPath();
@@ -361,8 +372,9 @@ function draw(
 
   if (dots) {
     // Cream dots vanish on the light theme, so land adapts to the color scheme.
-    ctx.fillStyle = dark ? "rgba(255,246,220,0.8)" : "#2e7d4e";
-    const half = dark ? 1 : 1.25;
+    // Warm sand land on deep sea reads in both modes.
+    ctx.fillStyle = dark ? "#fff6dc" : "#ffe3a1";
+    const half = 1.25;
     for (const [lat, lng] of dots) {
       const p = project(lat, lng, rotX, rotY);
       if (!p) continue;
@@ -412,7 +424,7 @@ function draw(
       ctx.lineWidth = 2;
       ctx.strokeStyle = "#fff";
       ctx.stroke();
-      ctx.fillStyle = dark ? "#fff" : "#1d3557";
+      ctx.fillStyle = "#fff";
       ctx.font = "600 11px system-ui";
       ctx.textAlign = "center";
       ctx.fillText(userLabel, X, Y - 13);
@@ -422,7 +434,7 @@ function draw(
 
   ctx.beginPath();
   ctx.arc(cx, cy, R, 0, Math.PI * 2);
-  ctx.strokeStyle = dark ? "rgba(255,246,220,0.4)" : "rgba(46,90,120,0.4)";
+  ctx.strokeStyle = dark ? "rgba(255,246,220,0.5)" : "rgba(44,62,104,0.55)";
   ctx.lineWidth = 1.5;
   ctx.stroke();
 }
