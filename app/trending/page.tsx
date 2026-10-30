@@ -66,6 +66,9 @@ export default function TrendingPage() {
           selectedId={spotId}
           onSelect={setSpotId}
           label={t(locale, "trending.mapLabel")}
+          zoomInLabel={t(locale, "trending.zoomIn")}
+          zoomOutLabel={t(locale, "trending.zoomOut")}
+          resetLabel={t(locale, "trending.resetView")}
         />
         <div className="stack">
           <div className="chips">

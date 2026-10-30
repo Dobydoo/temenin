@@ -1,0 +1,44 @@
+
+> temenin@0.1.0 dev
+> next dev
+
+▲ Next.js 16.4.3 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.182:3000
+✓ Ready in 249ms
+✓ Running next.config.ts took 26ms
+
+Image with src "/brand/lockup-navy-text.png" is using quality "90" which is not configured in images.qualities [75]. Please update your config to [75, 90].
+Read more: https://nextjs.org/docs/messages/next-image-unconfigured-qualities
+Image with src "/brand/lockup-cream-text.png" is using quality "90" which is not configured in images.qualities [75]. Please update your config to [75, 90].
+Read more: https://nextjs.org/docs/messages/next-image-unconfigured-qualities
+ GET / 200 in 293ms (next.js: 95ms, application-code: 198ms)
+ GET / 200 in 33ms (next.js: 1.0ms, application-code: 32ms)
+ GET /trending 200 in 45ms (next.js: 4ms, application-code: 42ms)
+ GET /explore 200 in 186ms (next.js: 4ms, application-code: 182ms)
+ GET / 200 in 61ms (next.js: 3ms, application-code: 58ms)
+[browser] Image with src "/brand/lockup-navy-text.png" is using quality "90" which is not configured in images.qualities [75]. Please update your config to [75, 90].
+Read more: https://nextjs.org/docs/messages/next-image-unconfigured-qualities
+[browser] Image with src "/brand/lockup-cream-text.png" is using quality "90" which is not configured in images.qualities [75]. Please update your config to [75, 90].
+Read more: https://nextjs.org/docs/messages/next-image-unconfigured-qualities
+[browser] Image with src "/brand/lockup-cream-text.png" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading
+ GET /match/a-sekar-coffee 200 in 298ms (next.js: 268ms, application-code: 30ms)
+✓ Compiled in 131ms
+✓ Compiled in 443ms
+ GET / 200 in 33ms (next.js: 1.1ms, application-code: 32ms)
+ GET /explore 200 in 17ms (next.js: 1.4ms, application-code: 15ms)
+ GET /match/g-033 200 in 33ms (next.js: 13ms, application-code: 20ms)
+✓ Compiled in 140ms
+ GET / 200 in 20ms (next.js: 2ms, application-code: 17ms)
+ GET /match/a-sekar-coffee 200 in 35ms (next.js: 14ms, application-code: 21ms)
+ GET /explore 200 in 22ms (next.js: 1.4ms, application-code: 21ms)
+ GET /trending 200 in 16ms (next.js: 1.6ms, application-code: 15ms)
+ GET /land-dots.json 404 in 666ms (next.js: 629ms, application-code: 37ms)
+ GET /land-dots.json 404 in 40ms (next.js: 4ms, application-code: 35ms)
+ GET /match/a-sekar-coffee 200 in 62ms (next.js: 14ms, application-code: 48ms)
+ GET /land-dots.json 404 in 25ms (next.js: 3ms, application-code: 21ms)
+ GET /match/g-150 200 in 29ms (next.js: 14ms, application-code: 15ms)
+✓ Compiled in 52ms
+✓ Compiled in 47ms
+ GET /trending 200 in 33ms (next.js: 0.7ms, application-code: 32ms)

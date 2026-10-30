@@ -15,7 +15,14 @@ type Props = {
   selectedId: string | null;
   onSelect: (id: string) => void;
   label: string;
+  zoomInLabel?: string;
+  zoomOutLabel?: string;
+  resetLabel?: string;
 };
+
+const MIN_ZOOM = 0.7;
+const MAX_ZOOM = 2.8;
+const clampZoom = (z: number) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z));
 
 const rad = (deg: number) => (deg * Math.PI) / 180;
 
@@ -34,11 +41,12 @@ function project(lat: number, lng: number, rotX: number, rotY: number) {
   return { x, y };
 }
 
-export function Globe({ pins, selectedId, onSelect, label }: Props) {
+export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom in", zoomOutLabel = "Zoom out", resetLabel = "Reset view" }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dots, setDots] = useState<[number, number][] | null>(null);
-  const live = useRef({ rotX: rad(-106), rotY: rad(18), dragging: false, moved: 0, lastX: 0, lastY: 0 });
+  const [zoom, setZoom] = useState(1);
+  const live = useRef({ rotX: rad(-106), rotY: rad(18), dragging: false, moved: 0, lastX: 0, lastY: 0, zoom: 1, pinch: new Map<number, { x: number; y: number }>(), pinchDist: 0 });
   const pinsRef = useRef(pins);
   const selectRef = useRef(onSelect);
   const selectedRef = useRef(selectedId);
@@ -68,6 +76,7 @@ export function Globe({ pins, selectedId, onSelect, label }: Props) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const darkMode = window.matchMedia("(prefers-color-scheme: dark)");
     let raf = 0;
     let size = 0;
 
@@ -85,29 +94,67 @@ export function Globe({ pins, selectedId, onSelect, label }: Props) {
     const observer = new ResizeObserver(resize);
     observer.observe(wrap);
 
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const s = live.current;
+      s.zoom = clampZoom(s.zoom * Math.exp(-event.deltaY * 0.0012));
+      setZoom(s.zoom);
+    };
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+
     const frame = () => {
       const s = live.current;
       if (!s.dragging && !motion.matches) s.rotX += 0.0016;
-      draw(ctx, size, s.rotX, s.rotY, dots, pinsRef.current, selectedRef.current);
+      draw(ctx, size, s.rotX, s.rotY, dots, pinsRef.current, selectedRef.current, s.zoom, darkMode.matches);
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
     return () => {
       cancelAnimationFrame(raf);
       observer.disconnect();
+      canvas.removeEventListener("wheel", onWheel);
     };
   }, [dots]);
 
+  const setLiveZoom = (z: number) => {
+    const s = live.current;
+    s.zoom = clampZoom(z);
+    setZoom(s.zoom);
+  };
+
   const onPointerDown = (event: React.PointerEvent) => {
     const s = live.current;
-    s.dragging = true;
-    s.moved = 0;
-    s.lastX = event.clientX;
-    s.lastY = event.clientY;
+    s.pinch.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (s.pinch.size === 2) {
+      const pts = [...s.pinch.values()];
+      const a = pts[0] ?? { x: 0, y: 0 };
+      const b = pts[1] ?? { x: 0, y: 0 };
+      s.pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
+      s.dragging = false;
+    } else {
+      s.dragging = true;
+      s.moved = 0;
+      s.lastX = event.clientX;
+      s.lastY = event.clientY;
+    }
     (event.target as HTMLElement).setPointerCapture(event.pointerId);
   };
   const onPointerMove = (event: React.PointerEvent) => {
     const s = live.current;
+    if (s.pinch.has(event.pointerId)) s.pinch.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (s.pinch.size === 2) {
+      const pts = [...s.pinch.values()];
+      const a = pts[0] ?? { x: 0, y: 0 };
+      const b = pts[1] ?? { x: 0, y: 0 };
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      if (s.pinchDist > 0) {
+        s.zoom = clampZoom((s.zoom * dist) / s.pinchDist);
+        setZoom(s.zoom);
+      }
+      s.pinchDist = dist;
+      s.moved += 1;
+      return;
+    }
     if (!s.dragging) return;
     const dx = event.clientX - s.lastX;
     const dy = event.clientY - s.lastY;
@@ -117,16 +164,20 @@ export function Globe({ pins, selectedId, onSelect, label }: Props) {
     s.rotX += dx * 0.005;
     s.rotY = Math.max(-1.2, Math.min(1.2, s.rotY + dy * 0.003));
   };
-  const onPointerUp = (event: React.PointerEvent) => {
+  const endPointer = (event: React.PointerEvent) => {
     const s = live.current;
+    s.pinch.delete(event.pointerId);
+    if (s.pinch.size < 2) s.pinchDist = 0;
+    if (s.pinch.size > 0) return;
+    const wasTap = s.moved <= 6;
     s.dragging = false;
-    if (s.moved > 6) return;
+    if (!wasTap) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     const px = event.clientX - rect.left - rect.width / 2;
     const py = event.clientY - rect.top - rect.height / 2;
-    const R = rect.width / 2 - 8;
+    const R = (rect.width / 2 - 8) * s.zoom;
     let best: GlobePin | null = null;
     let bestDist = 18;
     for (const pin of pinsRef.current) {
@@ -142,16 +193,35 @@ export function Globe({ pins, selectedId, onSelect, label }: Props) {
   };
 
   return (
-    <div ref={wrapRef} className="globe" style={{ display: "grid", placeItems: "center" }}>
+    <div ref={wrapRef} className="globe" style={{ display: "grid", placeItems: "center", position: "relative" }}>
       <canvas
         ref={canvasRef}
         role="application"
         aria-label={label}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        style={{ touchAction: "pan-y", cursor: "grab" }}
+        onPointerUp={endPointer}
+        onPointerCancel={endPointer}
+        onDoubleClick={() => setLiveZoom(1)}
+        style={{ touchAction: "none", cursor: "grab" }}
       />
+      <div
+        role="group"
+        aria-label={label}
+        style={{ position: "absolute", right: 12, bottom: 12, display: "flex", flexDirection: "column", gap: 6 }}
+      >
+        <button type="button" className="chip" aria-label={zoomInLabel} title={zoomInLabel} onClick={() => setLiveZoom(live.current.zoom + 0.3)} disabled={zoom >= MAX_ZOOM} style={{ minWidth: 36, textAlign: "center" }}>
+          +
+        </button>
+        <button type="button" className="chip" aria-label={zoomOutLabel} title={zoomOutLabel} onClick={() => setLiveZoom(live.current.zoom - 0.3)} disabled={zoom <= MIN_ZOOM} style={{ minWidth: 36, textAlign: "center" }}>
+          &minus;
+        </button>
+        {zoom !== 1 && (
+          <button type="button" className="chip" aria-label={resetLabel} title={resetLabel} onClick={() => setLiveZoom(1)} style={{ minWidth: 36, textAlign: "center" }}>
+            1:1
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -164,8 +234,11 @@ function draw(
   dots: [number, number][] | null,
   pins: GlobePin[],
   selectedId: string | null,
+  zoom = 1,
+  dark = true,
 ) {
   const R = size / 2 - 8;
+  const Re = R * zoom;
   const cx = size / 2;
   const cy = size / 2;
   ctx.clearRect(0, 0, size, size);
@@ -183,15 +256,15 @@ function draw(
   ctx.arc(cx, cy, R, 0, Math.PI * 2);
   ctx.clip();
 
-  ctx.strokeStyle = "rgba(255,246,220,0.28)";
+  ctx.strokeStyle = dark ? "rgba(255,246,220,0.28)" : "rgba(46,90,120,0.30)";
   ctx.lineWidth = 1;
   for (let lng = -180; lng < 180; lng += 20) {
     ctx.beginPath();
     for (let lat = -90; lat <= 90; lat += 4) {
       const p = project(lat, lng, rotX, rotY);
       if (!p) continue;
-      const X = cx + p.x * R;
-      const Y = cy - p.y * R;
+      const X = cx + p.x * Re;
+      const Y = cy - p.y * Re;
       if (lat === -90) ctx.moveTo(X, Y);
       else ctx.lineTo(X, Y);
     }
@@ -206,8 +279,8 @@ function draw(
         pen = false;
         continue;
       }
-      const X = cx + p.x * R;
-      const Y = cy - p.y * R;
+      const X = cx + p.x * Re;
+      const Y = cy - p.y * Re;
       if (!pen) {
         ctx.moveTo(X, Y);
         pen = true;
@@ -217,11 +290,14 @@ function draw(
   }
 
   if (dots) {
-    ctx.fillStyle = "rgba(255,246,220,0.6)";
+    // Cream dots vanish on the light theme, so land adapts to the color scheme.
+    ctx.fillStyle = dark ? "rgba(255,246,220,0.75)" : "rgba(46,110,66,0.9)";
+    const half = dark ? 0.75 : 1;
     for (const [lat, lng] of dots) {
       const p = project(lat, lng, rotX, rotY);
       if (!p) continue;
-      ctx.fillRect(cx + p.x * R - 0.75, cy - p.y * R - 0.75, 1.5, 1.5);
+      if (Math.hypot(p.x * Re, p.y * Re) > R) continue;
+      ctx.fillRect(cx + p.x * Re - half, cy - p.y * Re - half, half * 2, half * 2);
     }
   }
 
@@ -229,8 +305,9 @@ function draw(
   for (const pin of pins) {
     const p = project(pin.lat, pin.lng, rotX, rotY);
     if (!p) continue;
-    const X = cx + p.x * R;
-    const Y = cy - p.y * R;
+    if (Math.hypot(p.x * Re, p.y * Re) > R) continue;
+    const X = cx + p.x * Re;
+    const Y = cy - p.y * Re;
     const r = 4 + (pin.score / max) * 6;
     const selected = pin.id === selectedId;
     ctx.beginPath();
@@ -253,7 +330,7 @@ function draw(
 
   ctx.beginPath();
   ctx.arc(cx, cy, R, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(255,246,220,0.4)";
+  ctx.strokeStyle = dark ? "rgba(255,246,220,0.4)" : "rgba(46,90,120,0.4)";
   ctx.lineWidth = 1.5;
   ctx.stroke();
 }
