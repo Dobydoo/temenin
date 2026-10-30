@@ -56,6 +56,7 @@ export const DICT: Dict = {
   "feed.membersOnly": { en: "Members only", id: "Khusus anggota" },
   "feed.aboutPlan": { en: "About this plan", id: "Tentang rencana ini" },
   "feed.title": { en: "Timeline", id: "Linimasa" },
+  "profile.aboutMe": { en: "About me", id: "Tentang aku" },
   "review.title": { en: "Review the author", id: "Nilai author" },
   "review.submit": { en: "Submit review", id: "Kirim penilaian" },
   "review.done": { en: "Thanks for reviewing!", id: "Makasih penilaiannya!" },

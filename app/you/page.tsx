@@ -121,6 +121,18 @@ export default function YouPage() {
               />
             </div>
             <div className="field">
+              <label className="field__label" htmlFor="aboutme">
+                {t(locale, "profile.aboutMe")}
+              </label>
+              <textarea
+                id="aboutme"
+                className="input"
+                rows={3}
+                value={profile.aboutMe}
+                onChange={(event) => update({ profile: { ...profile, aboutMe: event.target.value } })}
+              />
+            </div>
+            <div className="field">
               <span className="field__label">{t(locale, "profile.language")}</span>
               <div className="langs" role="group" aria-label={t(locale, "profile.language")}>
                 <button type="button" aria-pressed={locale === "en"} onClick={() => update({ locale: "en" })}>
