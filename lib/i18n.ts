@@ -84,6 +84,8 @@ export const DICT: Dict = {
   "trending.zoomIn": { en: "Zoom in", id: "Perbesar" },
   "trending.zoomOut": { en: "Zoom out", id: "Perkecil" },
   "trending.resetView": { en: "Reset view", id: "Atur ulang tampilan" },
+  "trending.locateMe": { en: "Show my location", id: "Tampilkan lokasiku" },
+  "trending.you": { en: "You", id: "Kamu" },
   "trending.joins": { en: "joins this week", id: "gabung minggu ini" },
   "trending.quiet": { en: "Quiet here this week.", id: "Sepi minggu ini." },
   "trending.demo": { en: "Demo data for the hackathon.", id: "Data demo untuk hackathon." },

@@ -20,6 +20,10 @@ type Props = {
   resetLabel?: string;
   popup?: ReactNode;
   onClosePopup?: () => void;
+  userLoc?: { lat: number; lng: number } | null;
+  userLabel?: string;
+  onLocate?: () => void;
+  locateLabel?: string;
 };
 
 const MIN_ZOOM = 0.7;
@@ -43,7 +47,7 @@ function project(lat: number, lng: number, rotX: number, rotY: number) {
   return { x, y };
 }
 
-export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom in", zoomOutLabel = "Zoom out", resetLabel = "Reset view", popup, onClosePopup }: Props) {
+export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom in", zoomOutLabel = "Zoom out", resetLabel = "Reset view", popup, onClosePopup, userLoc = null, userLabel = "You", onLocate, locateLabel = "Show my location" }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -55,13 +59,17 @@ export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom i
   const selectedRef = useRef(selectedId);
   const popupContent = useRef(popup);
   const closeRef = useRef(onClosePopup);
+  const userLocRef = useRef(userLoc);
+  const userLabelRef = useRef(userLabel);
   useEffect(() => {
     pinsRef.current = pins;
     selectRef.current = onSelect;
     selectedRef.current = selectedId;
     popupContent.current = popup;
     closeRef.current = onClosePopup;
-  }, [pins, onSelect, selectedId, popup, onClosePopup]);
+    userLocRef.current = userLoc;
+    userLabelRef.current = userLabel;
+  }, [pins, onSelect, selectedId, popup, onClosePopup, userLoc, userLabel]);
 
   function positionPopup(rotX: number, rotY: number, zoom: number) {
     const el = popupRef.current;
@@ -138,8 +146,8 @@ export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom i
     const frame = () => {
       const s = live.current;
       // Slow spin that pauses while the user interacts and resumes after ~2.5s idle.
-      if (!s.dragging && s.pinch.size === 0 && !motion.matches && performance.now() - s.lastTouch > 2500) s.rotX += 0.0008;
-      draw(ctx, size, s.rotX, s.rotY, dots, pinsRef.current, selectedRef.current, s.zoom, darkMode.matches);
+      if (!s.dragging && s.pinch.size === 0 && !motion.matches && performance.now() - s.lastTouch > 2500) s.rotX += 0.0008 / s.zoom;
+      draw(ctx, size, s.rotX, s.rotY, dots, pinsRef.current, selectedRef.current, s.zoom, darkMode.matches, userLocRef.current, userLabelRef.current);
       positionPopup(s.rotX, s.rotY, s.zoom);
       raf = requestAnimationFrame(frame);
     };
@@ -199,8 +207,9 @@ export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom i
     s.moved += Math.abs(dx) + Math.abs(dy);
     s.lastX = event.clientX;
     s.lastY = event.clientY;
-    s.rotX += dx * 0.005;
-    s.rotY = Math.max(-1.2, Math.min(1.2, s.rotY + dy * 0.003));
+    // Divide by zoom so grabbing the surface feels the same at any zoom level.
+    s.rotX += (dx * 0.005) / s.zoom;
+    s.rotY = Math.max(-1.2, Math.min(1.2, s.rotY + (dy * 0.003) / s.zoom));
   };
   const endPointer = (event: React.PointerEvent) => {
     const s = live.current;
@@ -275,6 +284,11 @@ export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom i
             1:1
           </button>
         )}
+        {onLocate && (
+          <button type="button" className="chip" aria-label={locateLabel} title={locateLabel} onClick={onLocate} style={{ minWidth: 36, textAlign: "center" }}>
+            ⌖
+          </button>
+        )}
       </div>
     </div>
   );
@@ -290,6 +304,8 @@ function draw(
   selectedId: string | null,
   zoom = 1,
   dark = true,
+  userLoc: { lat: number; lng: number } | null = null,
+  userLabel = "You",
 ) {
   const R = size / 2 - 8;
   const Re = R * zoom;
@@ -378,6 +394,28 @@ function draw(
       ctx.strokeStyle = "#fff6dc";
       ctx.lineWidth = 2;
       ctx.stroke();
+    }
+  }
+  if (userLoc) {
+    const p = project(userLoc.lat, userLoc.lng, rotX, rotY);
+    if (p && Math.hypot(p.x * Re, p.y * Re) <= R) {
+      const X = cx + p.x * Re;
+      const Y = cy - p.y * Re;
+      ctx.beginPath();
+      ctx.arc(X, Y, 9, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(66,133,244,0.3)";
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(X, Y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = "#4285f4";
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#fff";
+      ctx.stroke();
+      ctx.fillStyle = dark ? "#fff" : "#1d3557";
+      ctx.font = "600 11px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(userLabel, X, Y - 13);
     }
   }
   ctx.restore();
