@@ -200,3 +200,54 @@ export type TrustedContact = {
   channel: "whatsapp" | "sms" | "email";
   destination: string;
 };
+
+export type Mood = "chill" | "hype" | "cozy" | "focus" | "romantic" | "blue";
+
+export type Spot = {
+  id: string;
+  name: string;
+  region: string;
+  country: string;
+  lat: number;
+  lng: number;
+};
+
+export type Song = {
+  id: string;
+  title: string;
+  artist: string;
+  moods: Mood[];
+};
+
+export type Photo = {
+  id: string;
+  label: string;
+  gradient: string;
+  moods: Mood[];
+};
+
+export type PostVisibility = "public" | "members";
+
+export type Post = {
+  id: string;
+  authorId: string;
+  activityId: string | null;
+  kind: "recap" | "moment";
+  body: string;
+  photoId: string | null;
+  songId: string | null;
+  visibility: PostVisibility;
+  areaId: string;
+  createdAt: string;
+};
+
+export type AuthorReview = {
+  id: string;
+  activityId: string;
+  reviewerId: string;
+  authorId: string;
+  rating: number;
+  tags: string[];
+  comment: string;
+  createdAt: string;
+};

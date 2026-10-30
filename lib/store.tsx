@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type {
   Activity,
   ActivityRules,
+  AuthorReview,
   ChatLevel,
   Checkin,
   Gender,
@@ -12,12 +13,14 @@ import type {
   Match,
   Meetup,
   Message,
+  Post,
   Review,
   User,
   VerificationStatus,
 } from "./types";
 import { PERSONAS, USER_BY_ID, VIEWER } from "./data/users";
 import { GENERATED_BOARD, GENERATED_JOINS } from "./data/board";
+import { SEED_AUTHOR_REVIEWS, SEED_POSTS } from "./data/posts";
 import { composeMatch, rankCandidates } from "./engine";
 
 export type Mode = "system" | "light" | "dark";
@@ -30,6 +33,7 @@ export type ViewerProfile = {
   mbti: string | null;
   interests: InterestId[];
   energyProfile: User["energyProfile"];
+  aboutMe: string;
 };
 
 export type State = {
@@ -53,6 +57,9 @@ export type State = {
   checkins: Checkin[];
   reviews: Review[];
   planShared: Record<string, boolean>;
+  posts: Post[];
+  following: string[];
+  authorReviews: AuthorReview[];
 };
 
 export type ResolvedMatch = {
@@ -197,6 +204,7 @@ const INITIAL: State = {
   mode: "system",
   verification: "unverified",
   profile: {
+    aboutMe: "",
     name: VIEWER.name,
     gender: VIEWER.gender,
     birthDate: VIEWER.birthDate,
@@ -224,6 +232,9 @@ const INITIAL: State = {
   checkins: [],
   reviews: [],
   planShared: {},
+  posts: SEED_POSTS,
+  following: [],
+  authorReviews: SEED_AUTHOR_REVIEWS,
 };
 
 const KEY = "temenin.state.v2";
@@ -285,6 +296,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       viewerId: account.id,
       verification: account.verification,
       profile: {
+        aboutMe: current.profile.aboutMe,
         name: account.name,
         gender: account.gender,
         birthDate: account.birthDate,
