@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export type GlobePin = {
   id: string;
@@ -18,6 +18,8 @@ type Props = {
   zoomInLabel?: string;
   zoomOutLabel?: string;
   resetLabel?: string;
+  popup?: ReactNode;
+  onClosePopup?: () => void;
 };
 
 const MIN_ZOOM = 0.7;
@@ -41,21 +43,51 @@ function project(lat: number, lng: number, rotX: number, rotY: number) {
   return { x, y };
 }
 
-export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom in", zoomOutLabel = "Zoom out", resetLabel = "Reset view" }: Props) {
+export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom in", zoomOutLabel = "Zoom out", resetLabel = "Reset view", popup, onClosePopup }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
   const [dots, setDots] = useState<[number, number][] | null>(null);
   const [zoom, setZoom] = useState(1);
   const live = useRef({ rotX: rad(-106), rotY: rad(18), dragging: false, moved: 0, lastX: 0, lastY: 0, zoom: 1, pinch: new Map<number, { x: number; y: number }>(), pinchDist: 0 });
   const pinsRef = useRef(pins);
   const selectRef = useRef(onSelect);
   const selectedRef = useRef(selectedId);
+  const popupContent = useRef(popup);
+  const closeRef = useRef(onClosePopup);
   useEffect(() => {
     pinsRef.current = pins;
     selectRef.current = onSelect;
     selectedRef.current = selectedId;
-  }, [pins, onSelect, selectedId]);
+    popupContent.current = popup;
+    closeRef.current = onClosePopup;
+  }, [pins, onSelect, selectedId, popup, onClosePopup]);
 
+  function positionPopup(rotX: number, rotY: number, zoom: number) {
+    const el = popupRef.current;
+    const canvas = canvasRef.current;
+    const wrap = wrapRef.current;
+    if (!el || !canvas || !wrap) return;
+    const pin = pinsRef.current.find((item) => item.id === selectedRef.current);
+    if (!pin || !popupContent.current) {
+      el.style.display = "none";
+      return;
+    }
+    const p = project(pin.lat, pin.lng, rotX, rotY);
+    const canvasRect = canvas.getBoundingClientRect();
+    const wrapRect = wrap.getBoundingClientRect();
+    const R = canvasRect.width / 2 - 8;
+    const Re = R * zoom;
+    if (!p || Math.hypot(p.x * Re, p.y * Re) > R) {
+      el.style.display = "none";
+      return;
+    }
+    el.style.display = "block";
+    const x = canvasRect.left - wrapRect.left + canvasRect.width / 2 + p.x * Re;
+    const y = canvasRect.top - wrapRect.top + canvasRect.height / 2 - p.y * Re;
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+  }
   useEffect(() => {
     let cancelled = false;
     fetch("/land-dots.json")
@@ -82,7 +114,7 @@ export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom i
 
     const resize = () => {
       const rect = wrap.getBoundingClientRect();
-      size = Math.max(240, Math.min(480, rect.width));
+      size = Math.max(240, Math.min(720, rect.width));
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       canvas.width = size * dpr;
       canvas.height = size * dpr;
@@ -106,6 +138,7 @@ export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom i
       const s = live.current;
       if (!s.dragging && !motion.matches) s.rotX += 0.0016;
       draw(ctx, size, s.rotX, s.rotY, dots, pinsRef.current, selectedRef.current, s.zoom, darkMode.matches);
+      positionPopup(s.rotX, s.rotY, s.zoom);
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
@@ -115,6 +148,7 @@ export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom i
       canvas.removeEventListener("wheel", onWheel);
     };
   }, [dots]);
+
 
   const setLiveZoom = (z: number) => {
     const s = live.current;
@@ -205,6 +239,21 @@ export function Globe({ pins, selectedId, onSelect, label, zoomInLabel = "Zoom i
         onDoubleClick={() => setLiveZoom(1)}
         style={{ touchAction: "none", cursor: "grab" }}
       />
+      {popup && (
+        <div
+          ref={popupRef}
+          style={{ display: "none", position: "absolute", left: 0, top: 0, transform: "translate(-50%, calc(-100% - 14px))", zIndex: 3, width: "max-content", maxWidth: "min(240px, 70vw)" }}
+        >
+          <div className="card" style={{ padding: "var(--space-xs) var(--space-sm)", position: "relative" }}>
+            {onClosePopup && (
+              <button type="button" className="chip" aria-label="Close" onClick={() => closeRef.current?.()} style={{ position: "absolute", top: -10, right: -10, minWidth: 28, height: 28, borderRadius: "50%", padding: 0 }}>
+                ×
+              </button>
+            )}
+            {popup}
+          </div>
+        </div>
+      )}
       <div
         role="group"
         aria-label={label}
