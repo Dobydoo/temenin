@@ -11,6 +11,7 @@ import { PERSONAS, USER_BY_ID } from "@/lib/data/users";
 import { AREA_BY_ID } from "@/lib/data/areas";
 import { formatDate } from "@/lib/format";
 import { ScoreRing, VerifiedBadge } from "@/components/ui";
+import { SealedPlan } from "@/components/SealedPlan";
 import { AfterPlan } from "@/components/AfterPlan";
 
 function RequestButton({ activityId, pickLabel }: { activityId: string; pickLabel: string }) {
@@ -169,6 +170,7 @@ export default function MatchListPage() {
   const group = activity ? activity.rules.mode.value !== "one_on_one" || activity.partySize > 2 : false;
 
   if (!activity) return <p className="muted">{locale === "en" ? "That plan is gone." : "Rencana itu tidak ada."}</p>;
+  if (state.verification !== "verified" && !mine) return <SealedPlan activity={activity} locale={locale} />;
 
   const area = AREA_BY_ID.get(activity.areaId);
   const selected = state.selected[activity.id];

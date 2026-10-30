@@ -11,6 +11,7 @@ import { VENUES } from "@/lib/data/venues";
 import { AREA_BY_ID } from "@/lib/data/areas";
 import { formatDate } from "@/lib/format";
 import { ScoreRing, VerifiedBadge } from "@/components/ui";
+import { SealedPlan } from "@/components/SealedPlan";
 import { useState } from "react";
 
 const CHECK_LABEL: Record<string, { en: string; id: string }> = {
@@ -54,6 +55,8 @@ export default function MatchDetailPage() {
   }
 
   const { activity, candidate, ranked } = resolved;
+  const mine = activity.creatorId === viewer.id;
+  if (state.verification !== "verified" && !mine) return <SealedPlan activity={activity} locale={state.locale} />;
   const current = ranked[resolved.index];
   if (!current) {
     return (

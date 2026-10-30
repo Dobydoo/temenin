@@ -77,6 +77,7 @@ export const DICT: Dict = {
   "composer.suggested": { en: "Suggested for this photo", id: "Cocok buat foto ini" },
   "composer.song": { en: "Add a song", id: "Tambah lagu" },
   "composer.credit": { en: "Photos: Unsplash via Picsum", id: "Foto: Unsplash via Picsum" },
+  "sealed.blurb": { en: "Verify your ID to see who, where, and when.", id: "Verifikasi ID untuk melihat siapa, di mana, dan kapan." },
   "trending.title": { en: "Trending", id: "Lagi rame" },
   "trending.sub": { en: "What is hot near you and across the map.", id: "Yang lagi rame di dekatmu dan di peta." },
   "trending.mapLabel": { en: "Trending globe. Drag to rotate, tap a pin.", id: "Globe tren. Geser untuk putar, ketuk pin." },
