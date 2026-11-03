@@ -4,9 +4,9 @@ Find a verified **activity buddy** for the plan you already have. You post the p
 
 Tagline: *Vibes click. Plans stick.* / *Energinya klik, rencananya jalan.*
 
-> Built for the Meta Global AI Developer Hackathon (building period 27 Oct – 4 Nov 2026). Spec lives in `AGENT/01-brand-identity-temenin.md` through `AGENT/06-uml-temenin.md`.
+> Built for Meta Global AI Developer Hackathon — Indie developer track, Build for Your World theme. Kickoff 26 Oct 2026; building 26 Oct – 4 Nov 9PM ET (deadline 5 Nov 09:00 WIB); judging 4–8 Nov; winners 9 Nov. Spec lives in `AGENT/01-brand-identity-temenin.md` through `AGENT/06-uml-temenin.md`.
 
-## Demo in 60 seconds
+> Track: Indie developer · Theme: Build for Your World. Submission (portal `.../hackathon/submit`, due 4 Nov 9PM ET): public repo + live demo link + demo video + this README. Live run below is 60 seconds; recorded submission video is 2–3 minutes (same 7-step story, extended with safety checklist + feedback). Demo video (3 min, YouTube): [PASTE UPLOAD LINK] (script: `docs/demo-video-script.md`, captions: `docs/demo/captions.srt`).
 
 1. Open `/` as **Nadia (unverified)**. Board cards show description only, name/area/time locked.
 2. Switch account to **Arif (verified)** via the gate dialog. Same board opens with names, areas, times.
@@ -17,7 +17,7 @@ Tagline: *Vibes click. Plans stick.* / *Energinya klik, rencananya jalan.*
 
 ## Stack
 
-Next.js 16.4.3 (App Router) + React 19 + TypeScript strict + Tailwind CSS 4 + Zod + lucide-react. Fonts via `next/font`: Plus Jakarta Sans (UI) + Pacifico (wordmark). No backend, no API keys, no AI calls at runtime. Security headers (CSP, `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`) in `next.config.ts`.
+Next.js 16.4.3 (App Router) + React 19 + TypeScript strict + Tailwind CSS 4 + Zod + lucide-react. Fonts via `next/font`: Plus Jakarta Sans (UI) + Pacifico (wordmark). No backend; live Meta Model API calls only when `META_MODEL_URL` + `META_MODEL_API_KEY` are set (otherwise deterministic local fallback). Security headers (CSP, `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`) in `next.config.ts`.
 
 ## Run it
 
@@ -40,6 +40,7 @@ npm run build && npm run start
 | --- | --- | --- |
 | Board | `/` | Plans sealed to description until the viewer verifies. Demo gate offers Nadia (unverified) vs Arif (verified). |
 | Explore | `/explore` | Filters by activity category and Jabodetabek zone. |
+| Trending | `/trending` | Globe map of trending hangout spots with popups (demo data). |
 | Create | `/create` | Free-text parsed by `parseFreeText()` into a draft card, then Aturan Main per plan with required/bonus toggles and Save Preference. |
 | Matches | `/match/[id]` | `rankCandidates()` order, checklist, `outsideGenderPreference` label. Join/request + host approve flow. |
 | Match detail | `/match/[id]/detail?candidate=` | Five score bars via `scoreRows()`, rules checklist, explanation, 3 icebreakers, top-3 venues from the curated list, safety checklist, share-plan button. |
@@ -79,6 +80,20 @@ Palette: navy `#425B9A`, sky `#76C0EC`, cream `#FFF6DC`, pink `#FF95A5`. Plus Ja
 - `AGENT/04-prd-temenin.md` — PRD, FR-01 to FR-30, NFRs.
 - `AGENT/05-erd-temenin.md` — 14 entities, Mermaid ERD.
 - `AGENT/06-uml-temenin.md` — use case, class, sequence, activity, state diagrams.
+
+## Hackathon entry (Official Rules)
+
+- Track: Indie developer. Theme: Build for Your World (urban loneliness: plans die without a verified activity buddy).
+- Judging map: Impact 30% (verified-buddy safety story, sealed plans until verified), Meta AI Tooling 25% (two live calls below, graceful fallback), Technical Depth 20% (deterministic scoring + privacy enforced in `lib/privacy.ts`), Demo 25% (60-sec live run + recorded video, submission portal requires working demo + demo video).
+- Dates (ET): kickoff 26 Oct; build 26 Oct–4 Nov 9PM ET; judging 4–8 Nov; winners 9 Nov.
+
+## AI calls (Meta hackathon)
+
+- `POST /api/ai/parse` (FR-07): tries Meta Model API (`META_MODEL_URL`, `META_MODEL_API_KEY`, optional `META_MODEL_NAME`, default `muse-spark`) 8s timeout, Zod validation, 20 req/min per IP, sanitized to known category/area/budget/chat enums. No key set means deterministic `parseFreeText()` fallback, so demo never depends on live API (NFR-04). `/create` uses it as progressive enhancement over local parse.
+- `POST /api/ai/reason` (FR-16): rewrites match explanation warmer in one sentence (locale-aware), same timeout/rate-limit/Zod envelope. Used by `MatchReason` as progressive enhancement over rule-based line.
+- `POST /api/ai/safety` (FR-27): second-layer AI check for messages the pattern filter flags as suspicious-but-unclear (spelled-out numbers, spaced/dotted digits, push to move off app). Runs only after `inspectMessage()` passes and before meetup confirm; `heldReason: "ai_safety_check"` carries the AI badge. Miss or no key keeps the pattern verdict.
+- `POST /api/ai/venues` (FR-28): ranks the curated `VENUES` list for the plan's area (id-only ordering, never invents places) plus one contextual line for the top pick. `/match/[id]/detail` applies the order only on `"ai"`, else the curated default.
+- Response contract (all four): `source` is `"ai"` only when the live model produced the payload; `MOCK_AI=true` returns `source: "fallback"` with `mock: true` so no AI badge ever shows without a real model. Clients apply payload only on `"ai"`.
 
 ## Not in scope
 

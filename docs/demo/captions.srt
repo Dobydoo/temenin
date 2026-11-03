@@ -1,0 +1,229 @@
+1
+00:00:00,400 --> 00:00:03,662
+In a city of millions, the hardest part
+
+2
+00:00:03,702 --> 00:00:06,795
+of the weekend isn't picking a movie.
+
+3
+00:00:06,835 --> 00:00:09,505
+It's finding someone to go with.
+
+4
+00:00:09,545 --> 00:00:12,723
+Meet Temenin, the app that finds you a
+
+5
+00:00:12,763 --> 00:00:14,755
+verified activity buddy.
+
+6
+00:00:14,795 --> 00:00:16,872
+Vibes click. Plans stick.
+
+7
+00:00:17,262 --> 00:00:20,190
+This is Nadia. She's new in Jakarta,
+
+8
+00:00:20,230 --> 00:00:24,560
+and this Saturday she wants to catch a
+film in Tebet,
+
+9
+00:00:24,600 --> 00:00:26,951
+but nobody she knows is free.
+
+10
+00:00:26,991 --> 00:00:30,496
+She opens Temenin as an unverified
+account.
+
+11
+00:00:30,536 --> 00:00:35,113
+Notice the board: you can read every
+plan's description,
+
+12
+00:00:35,153 --> 00:00:40,142
+but names, places, and times stay
+locked. Verified eyes only.
+
+13
+00:00:40,532 --> 00:00:43,563
+One quick ID check in the Safety Center,
+
+14
+00:00:43,603 --> 00:00:45,713
+and the same board opens up.
+
+15
+00:00:45,753 --> 00:00:50,243
+Names, areas, and times appear, each
+with a verified badge.
+
+16
+00:00:50,283 --> 00:00:53,084
+And this isn't just hidden on screen.
+
+17
+00:00:53,124 --> 00:00:56,693
+The privacy rule is enforced in the data
+layer,
+
+18
+00:00:56,733 --> 00:01:00,532
+so a display bug can never leak who's
+going where.
+
+19
+00:01:00,922 --> 00:01:03,148
+Now Nadia posts her own plan.
+
+20
+00:01:03,188 --> 00:01:07,368
+She just types one sentence, like she'd
+text a friend.
+
+21
+00:01:07,408 --> 00:01:11,510
+Temenin's concierge turns it into a
+structured draft:
+
+22
+00:01:11,550 --> 00:01:14,636
+category, area, budget, even chat level.
+
+23
+00:01:14,676 --> 00:01:18,075
+Then she sets her House Rules for this
+plan:
+
+24
+00:01:18,115 --> 00:01:20,810
+what's a must, what's just a bonus.
+
+25
+00:01:20,850 --> 00:01:26,202
+Every plan can have different rules,
+because every plan is different.
+
+26
+00:01:26,592 --> 00:01:28,658
+Here's the part we love most.
+
+27
+00:01:28,698 --> 00:01:33,305
+Every candidate gets a deterministic
+score from five components:
+
+28
+00:01:33,345 --> 00:01:38,243
+gender preference, shared interests,
+energy fit, context, and trust.
+
+29
+00:01:38,283 --> 00:01:39,913
+Nothing is a black box.
+
+30
+00:01:39,953 --> 00:01:44,488
+Weaker fits drop down the ranking with
+their score in the open,
+
+31
+00:01:44,528 --> 00:01:49,280
+next to a checklist showing exactly
+which of your rules they meet.
+
+32
+00:01:49,670 --> 00:01:52,758
+Tap a candidate and you get the full
+story.
+
+33
+00:01:52,798 --> 00:01:57,124
+Five score bars, a plain-language reason
+written for humans,
+
+34
+00:01:57,164 --> 00:01:59,743
+three icebreakers to start the chat,
+
+35
+00:01:59,783 --> 00:02:03,817
+and three public venues picked only from
+a curated list.
+
+36
+00:02:03,857 --> 00:02:06,000
+The app never invents a place.
+
+37
+00:02:06,040 --> 00:02:10,438
+A safety checklist sits right there
+before you can reach out.
+
+38
+00:02:10,828 --> 00:02:13,685
+They chat inside the app, and watch
+this:
+
+39
+00:02:13,725 --> 00:02:16,724
+when Nadia tries to share her phone
+number,
+
+40
+00:02:16,764 --> 00:02:22,590
+the filter holds the message with a gentle reminder to stay in-app until
+they meet.
+
+41
+00:02:22,630 --> 00:02:26,406
+Then both sides tick the safety
+checklist and confirm.
+
+42
+00:02:26,446 --> 00:02:31,282
+Only now, after a two-sided yes, does
+the exact meeting point appear.
+
+43
+00:02:31,322 --> 00:02:35,028
+One tap shares the whole plan with a
+trusted contact.
+
+44
+00:02:35,418 --> 00:02:40,871
+After the movie, Nadia taps home safe,
+then leaves stars, quick tags,
+
+45
+00:02:40,911 --> 00:02:41,747
+and a note.
+
+46
+00:02:41,787 --> 00:02:45,488
+Her buddy's trust and reliability scores
+go up,
+
+47
+00:02:45,528 --> 00:02:48,354
+so the next plan sticks even better.
+
+48
+00:02:48,394 --> 00:02:51,936
+That's Temenin: real plans, verified
+buddies,
+
+49
+00:02:51,976 --> 00:02:54,404
+safety built in, not bolted on.
+
+50
+00:02:54,444 --> 00:02:59,738
+The link to the live demo is in the
+description. See you out there.
+

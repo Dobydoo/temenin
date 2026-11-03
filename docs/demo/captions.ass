@@ -1,0 +1,63 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+WrapStyle: 1
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Liberation Sans,58,&H00FFFFFF,&H000000FF,&H90000000,&H90000000,0,0,0,0,100,100,0,0,1,2,0,2,60,60,44,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.40,0:00:03.66,Default,,0,0,0,,In a city of millions, the hardest part
+Dialogue: 0,0:00:03.70,0:00:06.80,Default,,0,0,0,,of the weekend isn't picking a movie.
+Dialogue: 0,0:00:06.84,0:00:09.51,Default,,0,0,0,,It's finding someone to go with.
+Dialogue: 0,0:00:09.55,0:00:12.72,Default,,0,0,0,,Meet Temenin, the app that finds you a
+Dialogue: 0,0:00:12.76,0:00:14.76,Default,,0,0,0,,verified activity buddy.
+Dialogue: 0,0:00:14.80,0:00:16.87,Default,,0,0,0,,Vibes click. Plans stick.
+Dialogue: 0,0:00:17.26,0:00:20.19,Default,,0,0,0,,This is Nadia. She's new in Jakarta,
+Dialogue: 0,0:00:20.23,0:00:24.56,Default,,0,0,0,,and this Saturday she wants to catch a\Nfilm in Tebet,
+Dialogue: 0,0:00:24.60,0:00:26.95,Default,,0,0,0,,but nobody she knows is free.
+Dialogue: 0,0:00:26.99,0:00:30.50,Default,,0,0,0,,She opens Temenin as an unverified\Naccount.
+Dialogue: 0,0:00:30.54,0:00:35.11,Default,,0,0,0,,Notice the board: you can read every\Nplan's description,
+Dialogue: 0,0:00:35.15,0:00:40.14,Default,,0,0,0,,but names, places, and times stay\Nlocked. Verified eyes only.
+Dialogue: 0,0:00:40.53,0:00:43.56,Default,,0,0,0,,One quick ID check in the Safety Center,
+Dialogue: 0,0:00:43.60,0:00:45.71,Default,,0,0,0,,and the same board opens up.
+Dialogue: 0,0:00:45.75,0:00:50.24,Default,,0,0,0,,Names, areas, and times appear, each\Nwith a verified badge.
+Dialogue: 0,0:00:50.28,0:00:53.08,Default,,0,0,0,,And this isn't just hidden on screen.
+Dialogue: 0,0:00:53.12,0:00:56.69,Default,,0,0,0,,The privacy rule is enforced in the data\Nlayer,
+Dialogue: 0,0:00:56.73,0:01:00.53,Default,,0,0,0,,so a display bug can never leak who's\Ngoing where.
+Dialogue: 0,0:01:00.92,0:01:03.15,Default,,0,0,0,,Now Nadia posts her own plan.
+Dialogue: 0,0:01:03.19,0:01:07.37,Default,,0,0,0,,She just types one sentence, like she'd\Ntext a friend.
+Dialogue: 0,0:01:07.41,0:01:11.51,Default,,0,0,0,,Temenin's concierge turns it into a\Nstructured draft:
+Dialogue: 0,0:01:11.55,0:01:14.64,Default,,0,0,0,,category, area, budget, even chat level.
+Dialogue: 0,0:01:14.68,0:01:18.07,Default,,0,0,0,,Then she sets her House Rules for this\Nplan:
+Dialogue: 0,0:01:18.11,0:01:20.81,Default,,0,0,0,,what's a must, what's just a bonus.
+Dialogue: 0,0:01:20.85,0:01:26.20,Default,,0,0,0,,Every plan can have different rules,\Nbecause every plan is different.
+Dialogue: 0,0:01:26.59,0:01:28.66,Default,,0,0,0,,Here's the part we love most.
+Dialogue: 0,0:01:28.70,0:01:33.31,Default,,0,0,0,,Every candidate gets a deterministic\Nscore from five components:
+Dialogue: 0,0:01:33.35,0:01:38.24,Default,,0,0,0,,gender preference, shared interests,\Nenergy fit, context, and trust.
+Dialogue: 0,0:01:38.28,0:01:39.91,Default,,0,0,0,,Nothing is a black box.
+Dialogue: 0,0:01:39.95,0:01:44.49,Default,,0,0,0,,Weaker fits drop down the ranking with\Ntheir score in the open,
+Dialogue: 0,0:01:44.53,0:01:49.28,Default,,0,0,0,,next to a checklist showing exactly\Nwhich of your rules they meet.
+Dialogue: 0,0:01:49.67,0:01:52.76,Default,,0,0,0,,Tap a candidate and you get the full\Nstory.
+Dialogue: 0,0:01:52.80,0:01:57.12,Default,,0,0,0,,Five score bars, a plain-language reason\Nwritten for humans,
+Dialogue: 0,0:01:57.16,0:01:59.74,Default,,0,0,0,,three icebreakers to start the chat,
+Dialogue: 0,0:01:59.78,0:02:03.82,Default,,0,0,0,,and three public venues picked only from\Na curated list.
+Dialogue: 0,0:02:03.86,0:02:06.00,Default,,0,0,0,,The app never invents a place.
+Dialogue: 0,0:02:06.04,0:02:10.44,Default,,0,0,0,,A safety checklist sits right there\Nbefore you can reach out.
+Dialogue: 0,0:02:10.83,0:02:13.69,Default,,0,0,0,,They chat inside the app, and watch\Nthis:
+Dialogue: 0,0:02:13.73,0:02:16.72,Default,,0,0,0,,when Nadia tries to share her phone\Nnumber,
+Dialogue: 0,0:02:16.76,0:02:22.59,Default,,0,0,0,,the filter holds the message with a gentle reminder to stay in-app until\Nthey meet.
+Dialogue: 0,0:02:22.63,0:02:26.41,Default,,0,0,0,,Then both sides tick the safety\Nchecklist and confirm.
+Dialogue: 0,0:02:26.45,0:02:31.28,Default,,0,0,0,,Only now, after a two-sided yes, does\Nthe exact meeting point appear.
+Dialogue: 0,0:02:31.32,0:02:35.03,Default,,0,0,0,,One tap shares the whole plan with a\Ntrusted contact.
+Dialogue: 0,0:02:35.42,0:02:40.87,Default,,0,0,0,,After the movie, Nadia taps home safe,\Nthen leaves stars, quick tags,
+Dialogue: 0,0:02:40.91,0:02:41.75,Default,,0,0,0,,and a note.
+Dialogue: 0,0:02:41.79,0:02:45.49,Default,,0,0,0,,Her buddy's trust and reliability scores\Ngo up,
+Dialogue: 0,0:02:45.53,0:02:48.35,Default,,0,0,0,,so the next plan sticks even better.
+Dialogue: 0,0:02:48.39,0:02:51.94,Default,,0,0,0,,That's Temenin: real plans, verified\Nbuddies,
+Dialogue: 0,0:02:51.98,0:02:54.40,Default,,0,0,0,,safety built in, not bolted on.
+Dialogue: 0,0:02:54.44,0:02:59.74,Default,,0,0,0,,The link to the live demo is in the\Ndescription. See you out there.
