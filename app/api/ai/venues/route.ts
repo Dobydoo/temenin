@@ -67,7 +67,8 @@ async function tryMetaAi(
     const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(content)?.[1] ?? content;
     const match = /{[\s\S]*}/.exec(fenced)?.[0] ?? /{[\s\S]*}/.exec(content)?.[0];
     if (!match) {
-      console.warn("[ai.venues] no JSON in content", content.slice(0, 200));
+      const finish = (json as { choices?: { finish_reason?: string }[] }).choices?.[0]?.finish_reason ?? "?";
+      console.warn("[ai.venues] no JSON in content", `finish=${finish} len=${content.length}`, content.slice(0, 300));
       return null;
     }
     const parsed = AiResult.safeParse(JSON.parse(match));
