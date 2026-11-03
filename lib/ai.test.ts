@@ -52,6 +52,14 @@ async function withStub(
   }
 }
 
+test("a documented base URL is completed to the chat completions endpoint", async () => {
+  const ai = await load({ META_MODEL_URL: "https://api.meta.ai/v1", META_MODEL_API_KEY: "k" });
+  assert.equal(ai.metaModelConfig()?.url, "https://api.meta.ai/v1/chat/completions");
+
+  await load({ META_MODEL_URL: "https://api.meta.ai/v1/chat/completions/" });
+  assert.equal(ai.metaModelConfig()?.url, "https://api.meta.ai/v1/chat/completions", "an endpoint stays as given");
+});
+
 test("the retired muse-spark alias resolves to a hosted model id", async () => {
   const ai = await load({ META_MODEL_URL: "http://x", META_MODEL_API_KEY: "k", META_MODEL_NAME: "muse-spark" });
   assert.equal(ai.metaModelConfig()?.model, "muse-spark-1.3-contributor");
@@ -140,6 +148,19 @@ test("the degraded note names the failure stage without leaking content", async 
   assert.equal(ai.degradedNote({ stage: "env", detail: "missing META_MODEL_URL/META_MODEL_API_KEY" }), "env");
   assert.equal(ai.degradedNote({ stage: "upstream", detail: "400 {\"error\":\"invalid model\"}" }), "upstream:400");
   assert.equal(ai.degradedNote({ stage: "upstream", detail: "fetch failed" }), "upstream:network");
-  assert.equal(ai.degradedNote({ stage: "shape", detail: "empty content finish=length" }), "shape:budget");
-  assert.equal(ai.degradedNote({ stage: "shape", detail: "schema mismatch {}" }), "shape");
+  assert.equal(ai.degradedNote({ stage: "shape", kind: "budget", detail: "empty content finish=length" }), "shape:budget");
+  assert.equal(ai.degradedNote({ stage: "shape", kind: "schema", detail: "schema mismatch {}" }), "shape:schema");
+});
+
+test("unparseable content is reported as not-json, not a network error", async () => {
+  await withStub(
+    () => ({ content: "Sure! Here is the JSON you asked for." }),
+    async ({ url }) => {
+      const ai = await load({ META_MODEL_URL: url, META_MODEL_API_KEY: "secret" });
+      const outcome = await ai.askMetaModel({ tag: "t", developer: "d", user: "u", schema: z.object({ ok: z.boolean() }) });
+      assert.equal(!outcome.ok && outcome.failure.stage, "shape");
+      assert.equal(!outcome.ok && outcome.failure.kind, "not-json");
+      assert.equal(!outcome.ok && ai.degradedNote(outcome.failure), "shape:not-json");
+    },
+  );
 });

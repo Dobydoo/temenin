@@ -10,9 +10,23 @@
 
 import { z } from "zod";
 
-export type AiFailure = { stage: "env" | "upstream" | "shape"; detail: string };
+export type AiFailure = {
+  stage: "env" | "upstream" | "shape";
+  /** Shape sub-case: which part of the response did not line up. */
+  kind?: "empty" | "budget" | "not-json" | "schema";
+  detail: string;
+};
 
 export type AiOutcome<T> = { ok: true; value: T } | { ok: false; failure: AiFailure };
+
+/**
+ * Accepts either the documented base URL (`https://api.meta.ai/v1`) or the
+ * full endpoint. Sending a base URL as-is POSTs to `/v1`, which 404s.
+ */
+function chatCompletionsUrl(configured: string) {
+  const url = configured.trim().replace(/\/+$/, "");
+  return /\/chat\/completions$/.test(url) ? url : `${url}/chat/completions`;
+}
 
 export function metaModelConfig() {
   const url = process.env.META_MODEL_URL;
@@ -21,7 +35,7 @@ export function metaModelConfig() {
   // Deployed envs still carry the retired bare alias from .env.example.
   const configured = process.env.META_MODEL_NAME?.trim();
   const model = !configured || configured === "muse-spark" ? "muse-spark-1.3-contributor" : configured;
-  return { url, key, model };
+  return { url: chatCompletionsUrl(url), key, model };
 }
 
 export function mockEnabled() {
@@ -41,7 +55,7 @@ export function warn(tag: string, failure: AiFailure) {
  */
 export function degradedNote(failure: AiFailure) {
   if (failure.stage === "env") return "env";
-  if (failure.stage === "shape") return failure.detail.includes("finish=length") ? "shape:budget" : "shape";
+  if (failure.stage === "shape") return `shape:${failure.kind}`;
   const status = /^(\d{3})\b/.exec(failure.detail)?.[1];
   return status ? `upstream:${status}` : "upstream:network";
 }
@@ -87,15 +101,30 @@ export async function askMetaModel<T>(options: {
     const json = (await res.json()) as {
       choices?: { message?: { content?: string | null }; finish_reason?: string }[];
     };
+    // Nothing here to recover from: report which part the payload lacked.
     const choice = json.choices?.[0];
     const content = (choice?.message?.content ?? "").replace(/^[\s\S]*?```(?:json)?\s*|\s*```[\s\S]*$/g, "");
     if (!content.trim()) {
-      return { ok: false, failure: { stage: "shape", detail: `empty content finish=${choice?.finish_reason ?? "?"}` } };
+      const budget = choice?.finish_reason === "length";
+      return {
+        ok: false,
+        failure: {
+          stage: "shape",
+          kind: budget ? "budget" : "empty",
+          detail: `empty content finish=${choice?.finish_reason ?? "?"} resp=${Object.keys(json).join(",")}`,
+        },
+      };
     }
 
-    const parsed = options.schema.safeParse(JSON.parse(content));
+    let raw: unknown;
+    try {
+      raw = JSON.parse(content);
+    } catch {
+      return { ok: false, failure: { stage: "shape", kind: "not-json", detail: content.slice(0, 200) } };
+    }
+    const parsed = options.schema.safeParse(raw);
     if (!parsed.success) {
-      return { ok: false, failure: { stage: "shape", detail: `schema mismatch ${content.slice(0, 200)}` } };
+      return { ok: false, failure: { stage: "shape", kind: "schema", detail: `schema mismatch ${content.slice(0, 200)}` } };
     }
     return { ok: true, value: parsed.data };
   } catch (err) {
