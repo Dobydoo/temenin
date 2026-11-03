@@ -30,12 +30,12 @@ async function tryMetaAi(body: string, locale: "en" | "id"): Promise<boolean | n
         messages: [
           {
             role: "system",
-            content: `You guard a meetup chat before both sides confirm. Reply JSON only: {"risky": true|false}. Risky means the message shares or asks for contact details (phone in digits, spelled-out words like "nol delapan", spaced/dotted numbers, social handles, email) or pushes to move off the app. Ordinary plans with times, prices, or "line" as queue are NOT risky. Locale: ${locale}.`,
+            content: `You guard a meetup chat before both sides confirm. Reply JSON only: {"risky": true|false}. Risky means the message shares or asks for contact details (phone in digits, spelled-out words like "nol delapan", spaced/dotted numbers, social handles, email) or pushes to move off the app. Ordinary plans with times, prices, or "line" as queue are NOT risky. Locale: ${locale}. Output ONLY the raw JSON object, no markdown fences, no extra text.`,
           },
           { role: "user", content: body.slice(0, 500) },
         ],
         temperature: 0,
-        max_tokens: 60,
+        max_tokens: 150,
       }),
     });
     if (!res.ok) {
@@ -45,13 +45,17 @@ async function tryMetaAi(body: string, locale: "en" | "id"): Promise<boolean | n
     }
     const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
     const content = json.choices?.[0]?.message?.content ?? "";
-    const match = /{[\s\S]*}/.exec(content)?.[0];
+    const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(content)?.[1] ?? content;
+    const match = /{[\s\S]*}/.exec(fenced)?.[0] ?? /{[\s\S]*}/.exec(content)?.[0];
     if (!match) {
       console.warn("[ai.safety] no JSON in content", content.slice(0, 200));
       return null;
     }
     const parsed = AiResult.safeParse(JSON.parse(match));
-    if (!parsed.success) return null;
+    if (!parsed.success) {
+      console.warn("[ai.safety] schema mismatch", match.slice(0, 200));
+      return null;
+    }
     return parsed.data.risky;
   } catch (err) {
     console.warn("[ai.safety] fetch failed", err instanceof Error ? err.message : String(err));

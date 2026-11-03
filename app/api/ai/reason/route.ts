@@ -13,7 +13,10 @@ const AiResult = z.object({ text: z.string().min(1).max(300) });
 
 function sanitize(value: unknown): string | null {
   const parsed = AiResult.safeParse(value);
-  if (!parsed.success) return null;
+  if (!parsed.success) {
+    console.warn("[ai.reason] schema mismatch", JSON.stringify(value)?.slice(0, 200));
+    return null;
+  }
   const text = parsed.data.text.trim().slice(0, 200);
   return text ? text : null;
 }
@@ -37,12 +40,12 @@ async function tryMetaAi(fallback: string, locale: "en" | "id"): Promise<string 
         messages: [
           {
             role: "system",
-            content: `Rewrite this buddy-match explanation warmer and personal, one sentence, max 140 characters, in ${locale === "id" ? "Indonesian" : "English"}. JSON only: {"text": "..."}.`,
+            content: `Rewrite this buddy-match explanation warmer and personal, one sentence, max 140 characters, in ${locale === "id" ? "Indonesian" : "English"}. JSON only: {"text": "..."}. Output ONLY the raw JSON object, no markdown fences, no extra text.`,
           },
           { role: "user", content: fallback.slice(0, 300) },
         ],
         temperature: 0.7,
-        max_tokens: 120,
+        max_tokens: 250,
       }),
     });
     if (!res.ok) {
@@ -52,7 +55,8 @@ async function tryMetaAi(fallback: string, locale: "en" | "id"): Promise<string 
     }
     const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
     const content = json.choices?.[0]?.message?.content ?? "";
-    const match = /{[\s\S]*}/.exec(content)?.[0];
+    const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(content)?.[1] ?? content;
+    const match = /{[\s\S]*}/.exec(fenced)?.[0] ?? /{[\s\S]*}/.exec(content)?.[0];
     if (!match) {
       console.warn("[ai.reason] no JSON in content", content.slice(0, 200));
       return null;

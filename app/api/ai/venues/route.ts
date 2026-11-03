@@ -49,12 +49,12 @@ async function tryMetaAi(
         messages: [
           {
             role: "system",
-            content: `Pick public meetup spots from this id list only: ${candidates.join(",")}. Plan: ${category}, area ${area?.name ?? areaId}, budget max ${budgetMax} rupiah. Reply JSON only: {"order": ["id", ...up to 3 from the list], "line": "one sentence, max 140 chars, in ${locale === "id" ? "Indonesian" : "English"}, why the top pick fits"}. Never invent ids.`,
+            content: `Pick public meetup spots from this id list only: ${candidates.join(",")}. Plan: ${category}, area ${area?.name ?? areaId}, budget max ${budgetMax} rupiah. Reply JSON only: {"order": ["id", ...up to 3 from the list], "line": "one sentence, max 140 chars, in ${locale === "id" ? "Indonesian" : "English"}, why the top pick fits"}. Never invent ids. Output ONLY the raw JSON object, no markdown fences, no extra text.`,
           },
           { role: "user", content: `Rank for ${category} under ${budgetMax}.` },
         ],
         temperature: 0.3,
-        max_tokens: 200,
+        max_tokens: 400,
       }),
     });
     if (!res.ok) {
@@ -64,13 +64,17 @@ async function tryMetaAi(
     }
     const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
     const content = json.choices?.[0]?.message?.content ?? "";
-    const match = /{[\s\S]*}/.exec(content)?.[0];
+    const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(content)?.[1] ?? content;
+    const match = /{[\s\S]*}/.exec(fenced)?.[0] ?? /{[\s\S]*}/.exec(content)?.[0];
     if (!match) {
       console.warn("[ai.venues] no JSON in content", content.slice(0, 200));
       return null;
     }
     const parsed = AiResult.safeParse(JSON.parse(match));
-    if (!parsed.success) return null;
+    if (!parsed.success) {
+      console.warn("[ai.venues] schema mismatch", match.slice(0, 200));
+      return null;
+    }
     const valid = parsed.data.order.filter((id) => candidates.includes(id)).slice(0, 3);
     const line = parsed.data.line.trim().slice(0, 200);
     if (valid.length === 0 || !line) return null;

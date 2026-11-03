@@ -23,7 +23,10 @@ const AREA_IDS = new Set(AREAS.map((a) => a.id));
 
 function sanitize(value: unknown, fallback: ParsedActivity): ParsedActivity {
   const parsed = AiResult.safeParse(value);
-  if (!parsed.success) return fallback;
+  if (!parsed.success) {
+    console.warn("[ai.parse] schema mismatch", JSON.stringify(value)?.slice(0, 200));
+    return fallback;
+  }
   const v = parsed.data;
   const areaId = v.areaId && AREA_IDS.has(v.areaId) ? v.areaId : fallback.areaId;
   return {
@@ -55,12 +58,12 @@ async function tryMetaAi(text: string, locale: "en" | "id", fallback: ParsedActi
         messages: [
           {
             role: "system",
-            content: `Parse an Indonesian activity plan into JSON only: {"category": one of movie|coffee|study|shopping|sports|food|music|other, "areaId": Jakarta district id or null, "budgetMax": number in rupiah, "chatLevel": quiet|moderate|chatty}. Known areas: ${[...AREA_IDS].join(",")}. Never invent other fields.`,
+            content: `Parse an Indonesian activity plan into JSON only: {"category": one of movie|coffee|study|shopping|sports|food|music|other, "areaId": Jakarta district id or null, "budgetMax": number in rupiah, "chatLevel": quiet|moderate|chatty}. Known areas: ${[...AREA_IDS].join(",")}. Never invent other fields. Output ONLY the raw JSON object, no markdown fences, no extra text.`,
           },
           { role: "user", content: `${locale === "id" ? "Pars teks ini:" : "Parse this text:"} ${text.slice(0, 500)}` },
         ],
         temperature: 0,
-        max_tokens: 200,
+        max_tokens: 400,
       }),
     });
     if (!res.ok) {
@@ -70,7 +73,8 @@ async function tryMetaAi(text: string, locale: "en" | "id", fallback: ParsedActi
     }
     const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
     const content = json.choices?.[0]?.message?.content ?? "";
-    const match = /{[\s\S]*}/.exec(content)?.[0];
+    const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(content)?.[1] ?? content;
+    const match = /{[\s\S]*}/.exec(fenced)?.[0] ?? /{[\s\S]*}/.exec(content)?.[0];
     if (!match) {
       console.warn("[ai.parse] no JSON in content", content.slice(0, 200));
       return null;
