@@ -25,6 +25,7 @@ export async function POST(req: Request) {
     developer: `You guard a meetup chat before both sides confirm. risky means the message shares or asks for contact details (phone in digits, spelled-out words like "nol delapan", spaced or dotted numbers, social handles, email) or pushes to move off the app. Ordinary plans with times, prices, or "line" as a queue are not risky. Locale: ${parsedBody.data.locale}.`,
     user: parsedBody.data.body.slice(0, 500),
     schema: AiResult,
+    schemaName: "SafetyVerdict",
     maxTokens: 1_500,
     temperature: 0,
   });

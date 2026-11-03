@@ -42,6 +42,7 @@ export async function POST(req: Request) {
     developer: `Pick public meetup spots ranked best-first from this id list only: ${candidates.join(", ")}. Plan: ${category}, area ${area?.name ?? areaId}, budget max ${budgetMax} rupiah. order holds up to 3 ids from the list. line explains the top pick in one sentence, at most 140 characters, in ${locale === "id" ? "Indonesian" : "English"}.`,
     user: `Rank for ${category} under ${budgetMax}.`,
     schema: AiResult,
+    schemaName: "VenueRanking",
     maxTokens: 2_000,
     temperature: 0.3,
   });

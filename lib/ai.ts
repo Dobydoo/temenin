@@ -65,6 +65,8 @@ export async function askMetaModel<T>(options: {
   developer: string;
   user: string;
   schema: z.ZodType<T>;
+  /** Response-format name; required for schema-constrained decoding. */
+  schemaName: string;
   /** Budget for reasoning + visible JSON; reasoning alone can exceed a few hundred tokens. */
   maxTokens?: number;
   temperature?: number;
@@ -76,22 +78,38 @@ export async function askMetaModel<T>(options: {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), options.timeoutMs ?? 12_000);
   try {
-    const res = await fetch(config.url, {
-      method: "POST",
-      signal: ctrl.signal,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.key}` },
-      body: JSON.stringify({
-        model: config.model,
-        messages: [
-          { role: "developer", content: `${options.developer} Reply with one JSON object only, no markdown fences and no extra text.` },
-          { role: "user", content: options.user },
-        ],
-        reasoning_effort: "minimal",
-        temperature: options.temperature ?? 0,
-        max_completion_tokens: options.maxTokens ?? 2_000,
-        response_format: { type: "json_object" },
-      }),
+    const send = (responseFormat: object) =>
+      fetch(config.url, {
+        method: "POST",
+        signal: ctrl.signal,
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.key}` },
+        body: JSON.stringify({
+          model: config.model,
+          messages: [
+            { role: "developer", content: `${options.developer} Reply with one JSON object only, no markdown fences and no extra text.` },
+            { role: "user", content: options.user },
+          ],
+          reasoning_effort: "minimal",
+          temperature: options.temperature ?? 0,
+          max_completion_tokens: options.maxTokens ?? 2_000,
+          response_format: responseFormat,
+        }),
+      });
+
+    // Schema-constrained decoding removes the "valid JSON, wrong fields" case.
+    // Meta supports a JSON Schema subset, so a rejection falls back to JSON
+    // mode rather than losing the live call.
+    // `$schema`/`$id` are not part of the subset Meta accepts.
+    const schema = z.toJSONSchema(options.schema) as Record<string, unknown>;
+    delete schema.$schema;
+    delete schema.$id;
+    let res = await send({
+      type: "json_schema",
+      json_schema: { name: options.schemaName, strict: true, schema },
     });
+    if (res.status === 400) {
+      res = await send({ type: "json_object" });
+    }
 
     if (!res.ok) {
       const body = (await res.text().catch(() => "")).slice(0, 300);
@@ -124,7 +142,8 @@ export async function askMetaModel<T>(options: {
     }
     const parsed = options.schema.safeParse(raw);
     if (!parsed.success) {
-      return { ok: false, failure: { stage: "shape", kind: "schema", detail: `schema mismatch ${content.slice(0, 200)}` } };
+      const issues = parsed.error.issues.map((issue) => issue.path.join(".") || "(root)").join(",");
+      return { ok: false, failure: { stage: "shape", kind: "schema", detail: `mismatch at ${issues}: ${content.slice(0, 200)}` } };
     }
     return { ok: true, value: parsed.data };
   } catch (err) {

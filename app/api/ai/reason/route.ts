@@ -30,6 +30,7 @@ export async function POST(req: Request) {
     developer: `Rewrite a buddy-match explanation to be warmer and personal in ${body.data.locale === "id" ? "Indonesian" : "English"}. One sentence, at most 140 characters. Keep every fact from the input; add no new facts.`,
     user: base,
     schema: AiResult,
+    schemaName: "ReasonLine",
     maxTokens: 1_500,
     temperature: 0.7,
   });

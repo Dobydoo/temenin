@@ -12,7 +12,7 @@ type SentPayload = {
   max_tokens?: number;
   max_completion_tokens: number;
   reasoning_effort: string;
-  response_format: { type: string };
+  response_format: { type: string } | { type: string; json_schema: unknown };
   messages: { role: string; content: string }[];
 };
 
@@ -79,6 +79,7 @@ test("missing credentials report an env failure instead of calling out", async (
     developer: "d",
     user: "u",
     schema: z.object({ ok: z.boolean() }),
+    schemaName: "T",
   });
   assert.equal(outcome.ok, false);
   assert.equal(!outcome.ok && outcome.failure.stage, "env");
@@ -94,6 +95,7 @@ test("requests budget above the reasoning pass and constrain JSON", async () => 
         developer: "Answer.",
         user: "hi",
         schema: z.object({ ok: z.boolean() }),
+        schemaName: "T",
       });
       assert.equal(outcome.ok, true);
       assert.deepEqual(!outcome.ok ? null : outcome.value, { ok: true });
@@ -103,7 +105,16 @@ test("requests budget above the reasoning pass and constrain JSON", async () => 
       assert.ok(payload.max_completion_tokens >= 1000, "budget must clear reasoning tokens");
       assert.equal(payload.max_tokens, undefined, "max_tokens is deprecated");
       assert.equal(payload.reasoning_effort, "minimal");
-      assert.deepEqual(payload.response_format, { type: "json_object" });
+      assert.equal(payload.response_format.type, "json_schema", "decoding is schema-constrained");
+      const format = payload.response_format as { json_schema: { name: string; strict: boolean; schema: unknown } };
+      assert.equal(format.json_schema.name, "T");
+      assert.equal(format.json_schema.strict, true);
+      assert.deepEqual(format.json_schema.schema, {
+        type: "object",
+        properties: { ok: { type: "boolean" } },
+        required: ["ok"],
+        additionalProperties: false,
+      }, "no $schema/$id: Meta accepts a JSON Schema subset");
       assert.deepEqual(
         payload.messages.map((message) => message.role),
         ["developer", "user"],
@@ -117,7 +128,7 @@ test("empty content and non-matching JSON surface as failures, not silent succes
     () => ({ content: "" }),
     async ({ url }) => {
       const ai = await load({ META_MODEL_URL: url, META_MODEL_API_KEY: "secret" });
-      const outcome = await ai.askMetaModel({ tag: "t", developer: "d", user: "u", schema: z.object({ ok: z.boolean() }) });
+      const outcome = await ai.askMetaModel({ tag: "t", developer: "d", user: "u", schema: z.object({ ok: z.boolean() }), schemaName: "T" });
       assert.equal(!outcome.ok && outcome.failure.stage, "shape");
     },
   );
@@ -125,7 +136,7 @@ test("empty content and non-matching JSON surface as failures, not silent succes
     () => ({ content: '{"ok":"yes"}' }),
     async ({ url }) => {
       const ai = await load({ META_MODEL_URL: url, META_MODEL_API_KEY: "secret" });
-      const outcome = await ai.askMetaModel({ tag: "t", developer: "d", user: "u", schema: z.object({ ok: z.boolean() }) });
+      const outcome = await ai.askMetaModel({ tag: "t", developer: "d", user: "u", schema: z.object({ ok: z.boolean() }), schemaName: "T" });
       assert.equal(!outcome.ok && outcome.failure.stage, "shape");
     },
   );
@@ -136,7 +147,7 @@ test("a rejected upstream reports the status for logs", async () => {
     () => ({ status: 400, content: "" }),
     async ({ url }) => {
       const ai = await load({ META_MODEL_URL: url, META_MODEL_API_KEY: "secret" });
-      const outcome = await ai.askMetaModel({ tag: "t", developer: "d", user: "u", schema: z.object({ ok: z.boolean() }) });
+      const outcome = await ai.askMetaModel({ tag: "t", developer: "d", user: "u", schema: z.object({ ok: z.boolean() }), schemaName: "T" });
       assert.equal(!outcome.ok && outcome.failure.stage, "upstream");
       assert.ok(!outcome.ok && outcome.failure.detail.startsWith("400"));
     },
@@ -157,10 +168,30 @@ test("unparseable content is reported as not-json, not a network error", async (
     () => ({ content: "Sure! Here is the JSON you asked for." }),
     async ({ url }) => {
       const ai = await load({ META_MODEL_URL: url, META_MODEL_API_KEY: "secret" });
-      const outcome = await ai.askMetaModel({ tag: "t", developer: "d", user: "u", schema: z.object({ ok: z.boolean() }) });
+      const outcome = await ai.askMetaModel({ tag: "t", developer: "d", user: "u", schema: z.object({ ok: z.boolean() }), schemaName: "T" });
       assert.equal(!outcome.ok && outcome.failure.stage, "shape");
       assert.equal(!outcome.ok && outcome.failure.kind, "not-json");
       assert.equal(!outcome.ok && ai.degradedNote(outcome.failure), "shape:not-json");
+    },
+  );
+});
+
+test("a rejected JSON Schema falls back to JSON mode instead of losing the call", async () => {
+  let first = true;
+  await withStub(
+    () => {
+      const reject = first;
+      first = false;
+      // Meta supports a JSON Schema subset; an unsupported schema is a 400.
+      return reject ? { status: 400, content: "" } : { content: '{"ok":true}' };
+    },
+    async ({ url, sent }) => {
+      const ai = await load({ META_MODEL_URL: url, META_MODEL_API_KEY: "secret" });
+      const outcome = await ai.askMetaModel({ tag: "t", developer: "d", user: "u", schema: z.object({ ok: z.boolean() }), schemaName: "T" });
+      assert.equal(outcome.ok, true, "the retry keeps the live call");
+      assert.equal(sent.length, 2);
+      assert.equal(sent[0]?.response_format.type, "json_schema");
+      assert.deepEqual(sent[1]?.response_format, { type: "json_object" });
     },
   );
 });

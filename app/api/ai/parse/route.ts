@@ -48,6 +48,7 @@ export async function POST(req: Request) {
     developer: `Parse an Indonesian activity plan into JSON. Known area ids: ${[...AREA_IDS].join(", ")}. Use the closest known area id, or null when the text names no place. budgetMax is a rupiah integer; "100 ribuan" means 100000. chatLevel reflects how much conversation the plan implies.`,
     user: body.data.text.slice(0, 500),
     schema: AiResult,
+    schemaName: "ParsedActivity",
     maxTokens: 2_000,
     temperature: 0,
   });
