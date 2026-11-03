@@ -21,7 +21,10 @@ function sanitize(value: unknown): string | null {
 async function tryMetaAi(fallback: string, locale: "en" | "id"): Promise<string | null> {
   const url = process.env.META_MODEL_URL;
   const key = process.env.META_MODEL_API_KEY;
-  if (!url || !key) return null;
+  if (!url || !key) {
+    console.warn("[ai.reason] missing env", { hasUrl: Boolean(url), hasKey: Boolean(key) });
+    return null;
+  }
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 8000);
   try {
@@ -42,13 +45,21 @@ async function tryMetaAi(fallback: string, locale: "en" | "id"): Promise<string 
         max_tokens: 120,
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const snippet = (await res.text().catch(() => "")).slice(0, 200);
+      console.warn("[ai.reason] upstream not ok", res.status, snippet);
+      return null;
+    }
     const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
     const content = json.choices?.[0]?.message?.content ?? "";
     const match = /{[\s\S]*}/.exec(content)?.[0];
-    if (!match) return null;
+    if (!match) {
+      console.warn("[ai.reason] no JSON in content", content.slice(0, 200));
+      return null;
+    }
     return sanitize(JSON.parse(match));
-  } catch {
+  } catch (err) {
+    console.warn("[ai.reason] fetch failed", err instanceof Error ? err.message : String(err));
     return null;
   } finally {
     clearTimeout(timer);
@@ -66,8 +77,10 @@ export async function POST(req: Request) {
     const text = (base + suffix).slice(0, 200);
     return NextResponse.json({ data: { text }, source: "fallback", mock: true });
   }
-  if (!process.env.META_MODEL_URL || !process.env.META_MODEL_API_KEY)
+  if (!process.env.META_MODEL_URL || !process.env.META_MODEL_API_KEY) {
+    console.warn("[ai.reason] missing env at handler");
     return NextResponse.json({ data: { text: base }, source: "fallback" });
+  }
   const ai = await tryMetaAi(body.data.fallback, body.data.locale);
   if (ai) return NextResponse.json({ data: { text: ai }, source: "ai" });
   return NextResponse.json({ data: { text: base }, source: "fallback" });

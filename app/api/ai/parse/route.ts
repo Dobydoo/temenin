@@ -39,7 +39,10 @@ function sanitize(value: unknown, fallback: ParsedActivity): ParsedActivity {
 async function tryMetaAi(text: string, locale: "en" | "id", fallback: ParsedActivity): Promise<ParsedActivity | null> {
   const url = process.env.META_MODEL_URL;
   const key = process.env.META_MODEL_API_KEY;
-  if (!url || !key) return null;
+  if (!url || !key) {
+    console.warn("[ai.parse] missing env", { hasUrl: Boolean(url), hasKey: Boolean(key) });
+    return null;
+  }
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 8000);
   try {
@@ -60,13 +63,21 @@ async function tryMetaAi(text: string, locale: "en" | "id", fallback: ParsedActi
         max_tokens: 200,
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const snippet = (await res.text().catch(() => "")).slice(0, 200);
+      console.warn("[ai.parse] upstream not ok", res.status, snippet);
+      return null;
+    }
     const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
     const content = json.choices?.[0]?.message?.content ?? "";
     const match = /{[\s\S]*}/.exec(content)?.[0];
-    if (!match) return null;
+    if (!match) {
+      console.warn("[ai.parse] no JSON in content", content.slice(0, 200));
+      return null;
+    }
     return sanitize(JSON.parse(match), fallback);
-  } catch {
+  } catch (err) {
+    console.warn("[ai.parse] fetch failed", err instanceof Error ? err.message : String(err));
     return null;
   } finally {
     clearTimeout(timer);
@@ -80,8 +91,10 @@ export async function POST(req: Request) {
   if (!body.success) return NextResponse.json({ error: "invalid_input" }, { status: 400 });
   const fallback = parseFreeText(body.data.text);
   if (process.env.MOCK_AI === "true") return NextResponse.json({ data: fallback, source: "fallback", mock: true });
-  if (!process.env.META_MODEL_URL || !process.env.META_MODEL_API_KEY)
+  if (!process.env.META_MODEL_URL || !process.env.META_MODEL_API_KEY) {
+    console.warn("[ai.parse] missing env at handler");
     return NextResponse.json({ data: fallback, source: "fallback" });
+  }
   const ai = await tryMetaAi(body.data.text, body.data.locale, fallback);
   if (ai) return NextResponse.json({ data: ai, source: "ai" });
   return NextResponse.json({ data: fallback, source: "fallback" });

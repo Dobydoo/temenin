@@ -30,7 +30,10 @@ async function tryMetaAi(
 ): Promise<{ order: string[]; line: string } | null> {
   const url = process.env.META_MODEL_URL;
   const key = process.env.META_MODEL_API_KEY;
-  if (!url || !key) return null;
+  if (!url || !key) {
+    console.warn("[ai.venues] missing env", { hasUrl: Boolean(url), hasKey: Boolean(key) });
+    return null;
+  }
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 8000);
   try {
@@ -54,18 +57,26 @@ async function tryMetaAi(
         max_tokens: 200,
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const snippet = (await res.text().catch(() => "")).slice(0, 200);
+      console.warn("[ai.venues] upstream not ok", res.status, snippet);
+      return null;
+    }
     const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
     const content = json.choices?.[0]?.message?.content ?? "";
     const match = /{[\s\S]*}/.exec(content)?.[0];
-    if (!match) return null;
+    if (!match) {
+      console.warn("[ai.venues] no JSON in content", content.slice(0, 200));
+      return null;
+    }
     const parsed = AiResult.safeParse(JSON.parse(match));
     if (!parsed.success) return null;
     const valid = parsed.data.order.filter((id) => candidates.includes(id)).slice(0, 3);
     const line = parsed.data.line.trim().slice(0, 200);
     if (valid.length === 0 || !line) return null;
     return { order: valid, line };
-  } catch {
+  } catch (err) {
+    console.warn("[ai.venues] fetch failed", err instanceof Error ? err.message : String(err));
     return null;
   } finally {
     clearTimeout(timer);
@@ -79,8 +90,10 @@ export async function POST(req: Request) {
   if (!body.success) return NextResponse.json({ error: "invalid_input" }, { status: 400 });
   if (process.env.MOCK_AI === "true")
     return NextResponse.json({ data: { order: [], line: "" }, source: "fallback", mock: true });
-  if (!process.env.META_MODEL_URL || !process.env.META_MODEL_API_KEY)
+  if (!process.env.META_MODEL_URL || !process.env.META_MODEL_API_KEY) {
+    console.warn("[ai.venues] missing env at handler");
     return NextResponse.json({ data: { order: [], line: "" }, source: "fallback" });
+  }
   const ai = await tryMetaAi(body.data.areaId, body.data.category, body.data.budgetMax, body.data.locale);
   if (!ai) return NextResponse.json({ data: { order: [], line: "" }, source: "fallback" });
   return NextResponse.json({ data: ai, source: "ai" });

@@ -14,7 +14,10 @@ const AiResult = z.object({ risky: z.boolean() });
 async function tryMetaAi(body: string, locale: "en" | "id"): Promise<boolean | null> {
   const url = process.env.META_MODEL_URL;
   const key = process.env.META_MODEL_API_KEY;
-  if (!url || !key) return null;
+  if (!url || !key) {
+    console.warn("[ai.safety] missing env", { hasUrl: Boolean(url), hasKey: Boolean(key) });
+    return null;
+  }
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 8000);
   try {
@@ -35,15 +38,23 @@ async function tryMetaAi(body: string, locale: "en" | "id"): Promise<boolean | n
         max_tokens: 60,
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const snippet = (await res.text().catch(() => "")).slice(0, 200);
+      console.warn("[ai.safety] upstream not ok", res.status, snippet);
+      return null;
+    }
     const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
     const content = json.choices?.[0]?.message?.content ?? "";
     const match = /{[\s\S]*}/.exec(content)?.[0];
-    if (!match) return null;
+    if (!match) {
+      console.warn("[ai.safety] no JSON in content", content.slice(0, 200));
+      return null;
+    }
     const parsed = AiResult.safeParse(JSON.parse(match));
     if (!parsed.success) return null;
     return parsed.data.risky;
-  } catch {
+  } catch (err) {
+    console.warn("[ai.safety] fetch failed", err instanceof Error ? err.message : String(err));
     return null;
   } finally {
     clearTimeout(timer);
@@ -57,8 +68,10 @@ export async function POST(req: Request) {
   if (!body.success) return NextResponse.json({ error: "invalid_input" }, { status: 400 });
   if (process.env.MOCK_AI === "true")
     return NextResponse.json({ data: { risky: false }, source: "fallback", mock: true });
-  if (!process.env.META_MODEL_URL || !process.env.META_MODEL_API_KEY)
+  if (!process.env.META_MODEL_URL || !process.env.META_MODEL_API_KEY) {
+    console.warn("[ai.safety] missing env at handler");
     return NextResponse.json({ data: { risky: false }, source: "fallback" });
+  }
   const risky = await tryMetaAi(body.data.body, body.data.locale);
   if (risky === null) return NextResponse.json({ data: { risky: false }, source: "fallback" });
   return NextResponse.json({ data: { risky }, source: "ai" });
