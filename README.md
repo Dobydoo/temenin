@@ -96,11 +96,13 @@ Palette: navy `#425B9A`, sky `#76C0EC`, cream `#FFF6DC`, pink `#FF95A5`. Plus Ja
 
 ## AI calls (Meta hackathon)
 
-- `POST /api/ai/parse` (FR-07): tries Meta Model API (`META_MODEL_URL`, `META_MODEL_API_KEY`, optional `META_MODEL_NAME`, default `muse-spark`) 8s timeout, Zod validation, 20 req/min per IP, sanitized to known category/area/budget/chat enums. No key set means deterministic `parseFreeText()` fallback, so demo never depends on live API (NFR-04). `/create` uses it as progressive enhancement over local parse.
+- `POST /api/ai/parse` (FR-07): tries Meta Model API (`META_MODEL_URL`, `META_MODEL_API_KEY`, optional `META_MODEL_NAME`, default `muse-spark-1.3-contributor`) 12s timeout, Zod validation, 20 req/min per IP, sanitized to known category/area/budget/chat enums. No key set means deterministic `parseFreeText()` fallback, so demo never depends on live API (NFR-04). `/create` uses it as progressive enhancement over local parse.
 - `POST /api/ai/reason` (FR-16): rewrites match explanation warmer in one sentence (locale-aware), same timeout/rate-limit/Zod envelope. Used by `MatchReason` as progressive enhancement over rule-based line.
 - `POST /api/ai/safety` (FR-27): second-layer AI check for messages the pattern filter flags as suspicious-but-unclear (spelled-out numbers, spaced/dotted digits, push to move off app). Runs only after `inspectMessage()` passes and before meetup confirm; `heldReason: "ai_safety_check"` carries the AI badge. Miss or no key keeps the pattern verdict.
 - `POST /api/ai/venues` (FR-28): ranks the curated `VENUES` list for the plan's area (id-only ordering, never invents places) plus one contextual line for the top pick. `/match/[id]/detail` applies the order only on `"ai"`, else the curated default.
 - Response contract (all four): `source` is `"ai"` only when the live model produced the payload; `MOCK_AI=true` returns `source: "fallback"` with `mock: true` so no AI badge ever shows without a real model. Clients apply payload only on `"ai"`.
+- Every route shares `lib/ai.ts`. Muse Spark always reasons and reasoning tokens count against the completion budget, so requests use `max_completion_tokens` (≥1000), `reasoning_effort: "minimal"`, and `response_format: {type: "json_object"}`. `muse-spark` alone is a retired alias; `META_MODEL_NAME` falls back to `muse-spark-1.3-contributor`.
+- When the live call fails, the Vercel log line names the stage: `[ai.parse] env` (missing key), `upstream` (HTTP status + body, e.g. a rejected model id), or `shape` (empty content, often `finish=length` from reasoning eating the budget).
 
 ## Not in scope
 

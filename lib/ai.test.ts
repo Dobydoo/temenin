@@ -1,0 +1,136 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { createServer } from "node:http";
+import { z } from "zod";
+
+// Regression guard for the live-AI fallback bug: a retired model alias was
+// sent verbatim, and the token budget was smaller than Muse Spark's reasoning
+// pass, so content came back empty and every route silently fell back.
+
+type SentPayload = {
+  model: string;
+  max_tokens?: number;
+  max_completion_tokens: number;
+  reasoning_effort: string;
+  response_format: { type: string };
+  messages: { role: string; content: string }[];
+};
+
+const load = async (env: Record<string, string | undefined>) => {
+  for (const [key, value] of Object.entries(env)) {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
+  return import("./ai.ts");
+};
+
+async function withStub(
+  reply: (payload: SentPayload) => { status?: number; content?: string },
+  run: (info: { url: string; sent: SentPayload[] }) => Promise<void>,
+) {
+  const sent: SentPayload[] = [];
+  const server = createServer((req, res) => {
+    let raw = "";
+    req.on("data", (chunk) => (raw += chunk));
+    req.on("end", () => {
+      const parsed: unknown = JSON.parse(raw || "{}");
+      const payload = parsed as SentPayload; // body this test itself wrote
+      sent.push(payload);
+      const { status = 200, content = "" } = reply(payload);
+      res.writeHead(status, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ choices: [{ message: { content }, finish_reason: content ? "stop" : "length" }] }));
+    });
+  });
+  const { promise, resolve } = Promise.withResolvers<void>();
+  server.listen(0, "127.0.0.1", resolve);
+  await promise;
+  try {
+    const { port } = server.address() as { port: number };
+    await run({ url: `http://127.0.0.1:${port}/v1/chat/completions`, sent });
+  } finally {
+    server.close();
+  }
+}
+
+test("the retired muse-spark alias resolves to a hosted model id", async () => {
+  const ai = await load({ META_MODEL_URL: "http://x", META_MODEL_API_KEY: "k", META_MODEL_NAME: "muse-spark" });
+  assert.equal(ai.metaModelConfig()?.model, "muse-spark-1.3-contributor");
+
+  await load({ META_MODEL_NAME: undefined });
+  assert.equal(ai.metaModelConfig()?.model, "muse-spark-1.3-contributor");
+
+  await load({ META_MODEL_NAME: "muse-wonder-1.0" });
+  assert.equal(ai.metaModelConfig()?.model, "muse-wonder-1.0", "an explicit model choice is never rewritten");
+});
+
+test("missing credentials report an env failure instead of calling out", async () => {
+  const ai = await load({ META_MODEL_URL: undefined, META_MODEL_API_KEY: undefined });
+  assert.equal(ai.metaModelConfig(), null);
+  const outcome = await ai.askMetaModel({
+    tag: "test",
+    developer: "d",
+    user: "u",
+    schema: z.object({ ok: z.boolean() }),
+  });
+  assert.equal(outcome.ok, false);
+  assert.equal(!outcome.ok && outcome.failure.stage, "env");
+});
+
+test("requests budget above the reasoning pass and constrain JSON", async () => {
+  await withStub(
+    () => ({ content: '{"ok":true}' }),
+    async ({ url, sent }) => {
+      const ai = await load({ META_MODEL_URL: url, META_MODEL_API_KEY: "secret", META_MODEL_NAME: undefined });
+      const outcome = await ai.askMetaModel({
+        tag: "test",
+        developer: "Answer.",
+        user: "hi",
+        schema: z.object({ ok: z.boolean() }),
+      });
+      assert.equal(outcome.ok, true);
+      assert.deepEqual(!outcome.ok ? null : outcome.value, { ok: true });
+
+      const payload = sent[0];
+      assert.ok(payload, "one upstream request");
+      assert.ok(payload.max_completion_tokens >= 1000, "budget must clear reasoning tokens");
+      assert.equal(payload.max_tokens, undefined, "max_tokens is deprecated");
+      assert.equal(payload.reasoning_effort, "minimal");
+      assert.deepEqual(payload.response_format, { type: "json_object" });
+      assert.deepEqual(
+        payload.messages.map((message) => message.role),
+        ["developer", "user"],
+      );
+    },
+  );
+});
+
+test("empty content and non-matching JSON surface as failures, not silent success", async () => {
+  await withStub(
+    () => ({ content: "" }),
+    async ({ url }) => {
+      const ai = await load({ META_MODEL_URL: url, META_MODEL_API_KEY: "secret" });
+      const outcome = await ai.askMetaModel({ tag: "t", developer: "d", user: "u", schema: z.object({ ok: z.boolean() }) });
+      assert.equal(!outcome.ok && outcome.failure.stage, "shape");
+    },
+  );
+  await withStub(
+    () => ({ content: '{"ok":"yes"}' }),
+    async ({ url }) => {
+      const ai = await load({ META_MODEL_URL: url, META_MODEL_API_KEY: "secret" });
+      const outcome = await ai.askMetaModel({ tag: "t", developer: "d", user: "u", schema: z.object({ ok: z.boolean() }) });
+      assert.equal(!outcome.ok && outcome.failure.stage, "shape");
+    },
+  );
+});
+
+test("a rejected upstream reports the status for logs", async () => {
+  await withStub(
+    () => ({ status: 400, content: "" }),
+    async ({ url }) => {
+      const ai = await load({ META_MODEL_URL: url, META_MODEL_API_KEY: "secret" });
+      const outcome = await ai.askMetaModel({ tag: "t", developer: "d", user: "u", schema: z.object({ ok: z.boolean() }) });
+      assert.equal(!outcome.ok && outcome.failure.stage, "upstream");
+      assert.ok(!outcome.ok && outcome.failure.detail.startsWith("400"));
+    },
+  );
+});

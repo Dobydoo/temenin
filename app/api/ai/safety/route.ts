@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createRateLimiter } from "@/lib/rate-limit";
+import { askMetaModel, mockEnabled, warn } from "@/lib/ai";
 
 const Body = z.object({
   body: z.string().min(1).max(500),
@@ -11,73 +12,26 @@ const limited = createRateLimiter(20, 60_000);
 
 const AiResult = z.object({ risky: z.boolean() });
 
-async function tryMetaAi(body: string, locale: "en" | "id"): Promise<boolean | null> {
-  const url = process.env.META_MODEL_URL;
-  const key = process.env.META_MODEL_API_KEY;
-  if (!url || !key) {
-    console.warn("[ai.safety] missing env", { hasUrl: Boolean(url), hasKey: Boolean(key) });
-    return null;
-  }
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 8000);
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      signal: ctrl.signal,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        model: process.env.META_MODEL_NAME ?? "muse-spark",
-        messages: [
-          {
-            role: "system",
-            content: `You guard a meetup chat before both sides confirm. Reply JSON only: {"risky": true|false}. Risky means the message shares or asks for contact details (phone in digits, spelled-out words like "nol delapan", spaced/dotted numbers, social handles, email) or pushes to move off the app. Ordinary plans with times, prices, or "line" as queue are NOT risky. Locale: ${locale}. Output ONLY the raw JSON object, no markdown fences, no extra text.`,
-          },
-          { role: "user", content: body.slice(0, 500) },
-        ],
-        temperature: 0,
-        max_tokens: 150,
-      }),
-    });
-    if (!res.ok) {
-      const snippet = (await res.text().catch(() => "")).slice(0, 200);
-      console.warn("[ai.safety] upstream not ok", res.status, snippet);
-      return null;
-    }
-    const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-    const content = json.choices?.[0]?.message?.content ?? "";
-    const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(content)?.[1] ?? content;
-    const match = /{[\s\S]*}/.exec(fenced)?.[0] ?? /{[\s\S]*}/.exec(content)?.[0];
-    if (!match) {
-      const finish = (json as { choices?: { finish_reason?: string }[] }).choices?.[0]?.finish_reason ?? "?";
-      console.warn("[ai.safety] no JSON in content", `finish=${finish} len=${content.length}`, content.slice(0, 300));
-      return null;
-    }
-    const parsed = AiResult.safeParse(JSON.parse(match));
-    if (!parsed.success) {
-      console.warn("[ai.safety] schema mismatch", match.slice(0, 200));
-      return null;
-    }
-    return parsed.data.risky;
-  } catch (err) {
-    console.warn("[ai.safety] fetch failed", err instanceof Error ? err.message : String(err));
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
   if (limited(ip)) return NextResponse.json({ error: "rate_limited" }, { status: 429 });
-  const body = Body.safeParse(await req.json().catch(() => null));
-  if (!body.success) return NextResponse.json({ error: "invalid_input" }, { status: 400 });
-  if (process.env.MOCK_AI === "true")
-    return NextResponse.json({ data: { risky: false }, source: "fallback", mock: true });
-  if (!process.env.META_MODEL_URL || !process.env.META_MODEL_API_KEY) {
-    console.warn("[ai.safety] missing env at handler");
+  const parsedBody = Body.safeParse(await req.json().catch(() => null));
+  if (!parsedBody.success) return NextResponse.json({ error: "invalid_input" }, { status: 400 });
+
+  if (mockEnabled()) return NextResponse.json({ data: { risky: false }, source: "fallback", mock: true });
+
+  const outcome = await askMetaModel({
+    tag: "ai.safety",
+    developer: `You guard a meetup chat before both sides confirm. risky means the message shares or asks for contact details (phone in digits, spelled-out words like "nol delapan", spaced or dotted numbers, social handles, email) or pushes to move off the app. Ordinary plans with times, prices, or "line" as a queue are not risky. Locale: ${parsedBody.data.locale}.`,
+    user: parsedBody.data.body.slice(0, 500),
+    schema: AiResult,
+    maxTokens: 1_500,
+    temperature: 0,
+  });
+
+  if (!outcome.ok) {
+    warn("ai.safety", outcome.failure);
     return NextResponse.json({ data: { risky: false }, source: "fallback" });
   }
-  const risky = await tryMetaAi(body.data.body, body.data.locale);
-  if (risky === null) return NextResponse.json({ data: { risky: false }, source: "fallback" });
-  return NextResponse.json({ data: { risky }, source: "ai" });
+  return NextResponse.json({ data: { risky: outcome.value.risky }, source: "ai" });
 }
