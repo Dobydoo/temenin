@@ -6,11 +6,9 @@ Tagline: *Vibes click. Plans stick.* / *Energinya klik, rencananya jalan.*
 
 **Live demo:** https://temenin-hackathon.vercel.app/ · **Demo video (3 min):** https://youtu.be/0_ITuyDeiBk
 
-![Temenin match detail: score ring, five score bars, and rules checklist](docs/demo/shots/s6a-detail.png)
-
 > Built for Meta Global AI Developer Hackathon — Indie developer track, Build for Your World theme. Kickoff 26 Oct 2026; building 26 Oct – 4 Nov 9PM ET (deadline 5 Nov 09:00 WIB); judging 4–8 Nov; winners 9 Nov. Spec lives in `AGENT/01-brand-identity-temenin.md` through `AGENT/06-uml-temenin.md`.
 
-> Track: Indie developer · Theme: Build for Your World. Submission (hackathon portal, due 4 Nov 9PM ET): [public repo](https://github.com/Dobydoo/temenin) + [live demo](https://temenin-hackathon.vercel.app/) + [demo video](https://youtu.be/0_ITuyDeiBk) + this README. Live run below is 60 seconds; recorded submission video is 3 minutes (same 7-step story, extended cut). Demo script: `docs/demo-video-script.md`, captions: `docs/demo/captions.srt`.
+> Track: Indie developer · Theme: Build for Your World. Submission (hackathon portal, due 4 Nov 9PM ET): [public repo](https://github.com/Dobydoo/temenin) + [live demo](https://temenin-hackathon.vercel.app/) + [demo video](https://youtu.be/0_ITuyDeiBk) + this README. Live run below is 60 seconds; recorded submission video is 3 minutes (same 7-step story, extended cut).
 
 1. Open `/` and pick **Nadia (unverified)** in the gate dialog. Board cards show description only, name/area/time locked.
 2. Open the account menu → **Log out**, then pick **Arif (verified)** in the gate dialog. Same board opens with names, areas, times.
