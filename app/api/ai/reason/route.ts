@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createRateLimiter } from "@/lib/rate-limit";
-import { askMetaModel, mockEnabled, warn } from "@/lib/ai";
+import { askMetaModel, degradedNote, mockEnabled, warn } from "@/lib/ai";
 
 const Body = z.object({
   fallback: z.string().min(1).max(300),
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
   if (!outcome.ok) {
     warn("ai.reason", outcome.failure);
-    return NextResponse.json({ data: { text: base }, source: "fallback" });
+    return NextResponse.json({ data: { text: base }, source: "fallback", degraded: degradedNote(outcome.failure) });
   }
   return NextResponse.json({ data: { text: outcome.value.text.trim().slice(0, 200) }, source: "ai" });
 }

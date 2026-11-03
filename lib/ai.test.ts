@@ -134,3 +134,12 @@ test("a rejected upstream reports the status for logs", async () => {
     },
   );
 });
+
+test("the degraded note names the failure stage without leaking content", async () => {
+  const ai = await load({});
+  assert.equal(ai.degradedNote({ stage: "env", detail: "missing META_MODEL_URL/META_MODEL_API_KEY" }), "env");
+  assert.equal(ai.degradedNote({ stage: "upstream", detail: "400 {\"error\":\"invalid model\"}" }), "upstream:400");
+  assert.equal(ai.degradedNote({ stage: "upstream", detail: "fetch failed" }), "upstream:network");
+  assert.equal(ai.degradedNote({ stage: "shape", detail: "empty content finish=length" }), "shape:budget");
+  assert.equal(ai.degradedNote({ stage: "shape", detail: "schema mismatch {}" }), "shape");
+});

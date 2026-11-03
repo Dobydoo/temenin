@@ -3,7 +3,7 @@ import { z } from "zod";
 import { parseFreeText, type ParsedActivity } from "@/lib/engine";
 import { AREAS } from "@/lib/data/areas";
 import { createRateLimiter } from "@/lib/rate-limit";
-import { askMetaModel, mockEnabled, warn } from "@/lib/ai";
+import { askMetaModel, degradedNote, mockEnabled, warn } from "@/lib/ai";
 import type { Category, ChatLevel } from "@/lib/types";
 
 const Body = z.object({
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
 
   if (!outcome.ok) {
     warn("ai.parse", outcome.failure);
-    return NextResponse.json({ data: fallback, source: "fallback" });
+    return NextResponse.json({ data: fallback, source: "fallback", degraded: degradedNote(outcome.failure) });
   }
   return NextResponse.json({ data: merge(outcome.value, fallback), source: "ai" });
 }

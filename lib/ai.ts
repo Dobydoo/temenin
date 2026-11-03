@@ -32,6 +32,20 @@ export function warn(tag: string, failure: AiFailure) {
   console.warn(`[${tag}] ${failure.stage}`, failure.detail);
 }
 
+/**
+ * A deployment whose logs are out of reach hides the only fact that matters:
+ * whether the live call failed on env, upstream, or shape. `degraded` carries
+ * just the stage and, for an upstream rejection, the HTTP status, so a curl
+ * can tell the cases apart. No prompt, response text, or credential leaves
+ * the server.
+ */
+export function degradedNote(failure: AiFailure) {
+  if (failure.stage === "env") return "env";
+  if (failure.stage === "shape") return failure.detail.includes("finish=length") ? "shape:budget" : "shape";
+  const status = /^(\d{3})\b/.exec(failure.detail)?.[1];
+  return status ? `upstream:${status}` : "upstream:network";
+}
+
 export async function askMetaModel<T>(options: {
   tag: string;
   developer: string;

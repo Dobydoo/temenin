@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createRateLimiter } from "@/lib/rate-limit";
 import { AREA_BY_ID } from "@/lib/data/areas";
 import { VENUES } from "@/lib/data/venues";
-import { askMetaModel, mockEnabled, warn } from "@/lib/ai";
+import { askMetaModel, degradedNote, mockEnabled, warn } from "@/lib/ai";
 
 const Body = z.object({
   activityId: z.string().min(1).max(100),
@@ -34,8 +34,7 @@ export async function POST(req: Request) {
 
   const { areaId, category, budgetMax, locale } = body.data;
   const candidates = venueIds(areaId);
-  const fallback = NextResponse.json({ data: empty, source: "fallback" });
-  if (candidates.length === 0) return fallback;
+  if (candidates.length === 0) return NextResponse.json({ data: empty, source: "fallback" });
 
   const area = AREA_BY_ID.get(areaId);
   const outcome = await askMetaModel({
@@ -49,11 +48,13 @@ export async function POST(req: Request) {
 
   if (!outcome.ok) {
     warn("ai.venues", outcome.failure);
-    return fallback;
+    return NextResponse.json({ data: empty, source: "fallback", degraded: degradedNote(outcome.failure) });
   }
 
   const order = outcome.value.order.filter((id) => candidates.includes(id)).slice(0, 3);
   const line = outcome.value.line.trim().slice(0, 200);
-  if (order.length === 0 || !line) return fallback;
+  if (order.length === 0 || !line) {
+    return NextResponse.json({ data: empty, source: "fallback", degraded: "shape" });
+  }
   return NextResponse.json({ data: { order, line }, source: "ai" });
 }
