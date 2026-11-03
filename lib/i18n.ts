@@ -1,8 +1,6 @@
 import type { Locale } from "./types";
 
-type Dict = Record<string, { en: string; id: string }>;
-
-export const DICT: Dict = {
+export const DICT = {
   "app.name": { en: "Temenin", id: "Temenin" },
   "app.tagline": { en: "Vibes click. Plans stick.", id: "Energinya klik, rencananya jalan." },
   "nav.home": { en: "Home", id: "Beranda" },
@@ -57,6 +55,8 @@ export const DICT: Dict = {
   "feed.membersOnly": { en: "Members only", id: "Khusus anggota" },
   "feed.aboutPlan": { en: "About this plan", id: "Tentang rencana ini" },
   "feed.title": { en: "Timeline", id: "Linimasa" },
+"plan.moments": { en: "Moments from this plan", id: "Keseruan plan ini" },
+"home.finished": { en: "Fresh off the plan", id: "Baru kelar" },
   "profile.aboutMe": { en: "About me", id: "Tentang aku" },
   "review.title": { en: "Review the author", id: "Nilai author" },
   "review.submit": { en: "Submit review", id: "Kirim penilaian" },
@@ -106,6 +106,13 @@ export const DICT: Dict = {
   "field.when": { en: "When", id: "Kapan" },
   "field.budget": { en: "Budget", id: "Budget" },
   "field.party": { en: "How many", id: "Berapa orang" },
+"create.openGroup": { en: "Open group", id: "Grup terbuka" },
+"create.openGroupHelp": { en: "No cap — anyone can join.", id: "Tanpa batas — siapa saja bisa gabung." },
+"plan.open": { en: "Open", id: "Terbuka" },
+"ai.badge": { en: "AI", id: "AI" },
+"plan.ongoing": { en: "Happening now", id: "Sedang berlangsung" },
+"plan.finished": { en: "Finished", id: "Selesai" },
+"field.duration": { en: "Duration", id: "Durasi" },
   "field.notes": { en: "Description", id: "Deskripsi" },
   "field.chatLevel": { en: "Talking level", id: "Level ngobrol" },
   "field.mbti": { en: "MBTI I am looking for", id: "MBTI yang dicari" },
@@ -140,6 +147,7 @@ export const DICT: Dict = {
   "match.pick": { en: "Ask this buddy", id: "Pilih temen ini" },
   "match.yourScore": { en: "Your match with the host", id: "Kecocokanmu dengan host" },
   "match.requests": { en: "Requests", id: "Permintaan" },
+"match.joined": { en: "Joined", id: "Yang gabung" },
   "match.approve": { en: "Approve", id: "Setujui" },
   "match.approved": { en: "Approved", id: "Disetujui" },
   "match.confirmStay": { en: "Still in", id: "Tetap ikut" },
@@ -172,6 +180,7 @@ export const DICT: Dict = {
   "chat.filterNote": { en: "Contact details stay inside the app until you both confirm.", id: "Info kontak tetap di dalam app sampai kalian berdua konfirmasi." },
   "chat.held": { en: "Held: phone numbers and social handles wait until the meetup is confirmed.", id: "Ditahan: nomor telepon dan akun sosial menunggu sampai ketemuan dikonfirmasi." },
   "chat.heldSocial": { en: "Held: social handles wait until the meetup is confirmed.", id: "Ditahan: akun sosial menunggu sampai ketemuan dikonfirmasi." },
+  "chat.heldAi": { en: "Held by AI safety check: this looks like contact details or a push off the app.", id: "Ditahan cek keamanan AI: ini terlihat seperti info kontak atau ajakan keluar app." },
   "chat.confirmedNote": { en: "Meetup confirmed. Contact details can be shared now.", id: "Ketemuan terkonfirmasi. Info kontak boleh dibagikan." },
   "chat.empty": { en: "No messages yet. Borrow an opener from the match screen.", id: "Belum ada pesan. Pinjam kalimat pembuka dari layar match." },
   "meetup.title": { en: "Meetup card", id: "Kartu ketemuan" },
@@ -253,9 +262,10 @@ export const DICT: Dict = {
   "common.people": { en: "people", id: "orang" },
   "common.min": { en: "min", id: "menit" },
   "common.notConnected": { en: "Nothing was sent. This demo keeps everything on your device.", id: "Tidak ada yang terkirim. Demo ini menyimpan semuanya di perangkatmu." },
-};
+} satisfies Record<string, { en: string; id: string }>;
 
-export function t(locale: Locale, key: keyof typeof DICT | string): string {
-  const entry = DICT[key];
-  return entry ? entry[locale] : key;
+export type I18nKey = keyof typeof DICT;
+
+export function t(locale: Locale, key: I18nKey): string {
+  return DICT[key]?.[locale] ?? key;
 }

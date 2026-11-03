@@ -1,13 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { Flame } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { t } from "@/lib/i18n";
 import { SPOTS, SPOT_BY_ID, SPOT_TRENDS } from "@/lib/data/spots";
 import { trendingScores } from "@/lib/social";
-import { Globe } from "@/components/Globe";
+
+const Globe = dynamic(() => import("@/components/Globe").then((mod) => mod.Globe), {
+  ssr: false,
+  loading: () => (
+    <div className="card" role="status" aria-label="Loading globe" style={{ aspectRatio: "1", maxHeight: 420 }}>
+      <p className="muted" style={{ textAlign: "center" }}>…</p>
+    </div>
+  ),
+});
 
 export default function TrendingPage() {
   const { state } = useStore();

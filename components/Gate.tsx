@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { t } from "@/lib/i18n";
@@ -12,18 +11,12 @@ const ACCOUNTS = [VIEWER.id, "u-arif"];
 export function Gate() {
   const { state, login, hydrate } = useStore();
   const locale = state.locale;
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    if (hydrate) setVisible(!state.viewerId);
-  }, [hydrate, state.viewerId]);
-
   if (!hydrate || state.viewerId) return null;
 
   const pick = (id: string) => login(id);
 
   return (
-    <div className={`gate${visible ? " gate--on" : ""}`} role="dialog" aria-modal="true" aria-label={t(locale, "login.title")}>
+    <div className="gate" role="dialog" aria-modal="true" aria-label={t(locale, "login.title")}>
       <div className="gate__card card">
         <p className="gate__kicker">{t(locale, "app.tagline")}</p>
         <h1>{t(locale, "login.title")}</h1>

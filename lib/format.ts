@@ -40,3 +40,11 @@ export function timeAgo(iso: string, locale: Locale): string {
   if (diffMs < 30 * 864e5) return rtf.format(-Math.round(diffMs / (7 * 864e5)), "week");
   return rtf.format(-Math.round(diffMs / (30 * 864e5)), "month");
 }
+
+// ponytail: unset/invalid durations fall back to 60 minutes.
+export function planEndsAt(startsAt: string, durationMin?: number | null): number {
+  const start = Date.parse(startsAt);
+  if (Number.isNaN(start)) return Number.NaN;
+  const minutes = durationMin && durationMin > 0 ? durationMin : 60;
+  return start + minutes * 60_000;
+}

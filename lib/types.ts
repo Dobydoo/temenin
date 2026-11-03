@@ -108,6 +108,10 @@ export type Activity = {
   budgetMin: number;
   budgetMax: number;
   partySize: number;
+  // Optional: true means no join cap; older stored plans omit it (treated as capped).
+  openGroup?: boolean;
+  // Optional: minutes; unset means 60. Older stored plans omit it.
+  durationMin?: number;
   source: "form" | "free_text";
   status: ActivityStatus;
   rules: ActivityRules;
@@ -251,4 +255,43 @@ export type AuthorReview = {
   tags: string[];
   comment: string;
   createdAt: string;
+};
+
+export type Mode = "system" | "light" | "dark";
+
+export type ViewerProfile = {
+  name: string;
+  gender: Gender;
+  birthDate: string;
+  areaId: string;
+  mbti: string | null;
+  interests: InterestId[];
+  energyProfile: EnergyProfile;
+  aboutMe: string;
+};
+
+export type State = {
+  viewerId: string | null;
+  locale: Locale;
+  mode: Mode;
+  verification: VerificationStatus;
+  profile: ViewerProfile;
+  activities: Activity[];
+  savedRules: ActivityRules | null;
+  selected: Record<string, string>;
+  joins: Record<string, string[]>;
+  approved: Record<string, string[]>;
+  confirms: Record<string, string[]>;
+  removed: Record<string, string[]>;
+  blocked: Record<string, string[]>;
+  reported: Record<string, string[]>;
+  hiddenPlans: Record<string, string[]>;
+  messages: Message[];
+  meetups: Meetup[];
+  checkins: Checkin[];
+  reviews: Review[];
+  planShared: Record<string, boolean>;
+  posts: Post[];
+  following: string[];
+  authorReviews: AuthorReview[];
 };

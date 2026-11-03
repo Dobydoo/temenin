@@ -33,15 +33,16 @@ export default function ThreadPage() {
   const venues = recommendVenues(activity, VENUES, locale);
   const shared = Boolean(state.planShared[matchId]);
 
-  const send = () => {
+  const send = async () => {
     const body = draft.trim();
     if (!body) return;
     const verdict = inspectMessage(body, confirmed);
+    const messageId = `msg-${Date.now()}`;
     update((store) => ({
       messages: [
         ...store.messages,
         {
-          id: `msg-${Date.now()}`,
+          id: messageId,
           matchId,
           senderId: viewer.id,
           body,
@@ -52,6 +53,30 @@ export default function ThreadPage() {
       ],
     }));
     setDraft("");
+    if (verdict.held || confirmed) return;
+    if (!/(\d|@|nomor|nomer|hub|kontak|\bwa\b|\big\b|line|tele|email|pindah|lanjut|off\s*app?|keluar\s*app|nol|kosong|zero|satu|dua|tiga|empat|lima|enam|tujuh|delapan|lapan|sembilan)/i.test(body)) return;
+    try {
+      const ctrl = new AbortController();
+      const killer = setTimeout(() => ctrl.abort(), 9000);
+      const res = await fetch("/api/ai/safety", {
+        method: "POST",
+        signal: ctrl.signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: body.slice(0, 500), locale }),
+      });
+      clearTimeout(killer);
+      if (!res.ok) return;
+      const json = (await res.json()) as { source?: string; data?: { risky?: boolean } };
+      if (json.source === "ai" && json.data?.risky) {
+        update((store) => ({
+          messages: store.messages.map((message) =>
+            message.id === messageId ? { ...message, held: true, heldReason: "ai_safety_check" as const } : message,
+          ),
+        }));
+      }
+    } catch {
+      // ponytail: silent fallback keeps pattern-filter verdict; upgrade path is a retry affordance.
+    }
   };
 
   const toggleCheck = (index: 0 | 1 | 2) => {
@@ -237,7 +262,14 @@ export default function ThreadPage() {
                 <div key={message.id} className={`bubble${own ? " bubble--own" : ""}${message.held ? " bubble--held" : ""}`}>
                   <span>{message.body}</span>
                   {message.held && (
-                    <span className="bubble__note">{message.heldReason === "social_handle" ? t(locale, "chat.heldSocial") : t(locale, "chat.held")}</span>
+                    <span className="bubble__note">
+                      {message.heldReason === "social_handle"
+                        ? t(locale, "chat.heldSocial")
+                        : message.heldReason === "ai_safety_check"
+                          ? t(locale, "chat.heldAi")
+                          : t(locale, "chat.held")}{" "}
+                      {message.heldReason === "ai_safety_check" && <span className="tag tag--accent">{t(locale, "ai.badge")}</span>}
+                    </span>
                   )}
                 </div>
               );

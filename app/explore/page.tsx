@@ -12,8 +12,13 @@ import { PlanCard } from "@/components/PlanCard";
 import { composeMatch } from "@/lib/engine";
 import type { Category } from "@/lib/types";
 
-function fullLast<T extends { id: string; partySize: number }>(list: T[], joins: Record<string, string[]>) {
-  const isFull = (a: T) => (joins[a.id]?.length ?? 0) >= Math.max(a.partySize - 1, 1);
+function fullLast<T extends { id: string; partySize: number; openGroup?: boolean; rules: { mode: { value: string } } }>(list: T[], approved: Record<string, string[]>, removed: Record<string, string[]>) {
+  const isFull = (a: T) => {
+    const count = (approved[a.id] ?? []).filter((rid) => !(removed[a.id] ?? []).includes(rid)).length;
+    const spots = Math.max(a.partySize - 1, 1);
+    const group = Boolean(a.openGroup) || a.rules.mode.value !== "one_on_one" || a.partySize > 2;
+    return !a.openGroup && count >= (group ? spots : 1);
+  };
   return [...list].sort((a, b) => Number(isFull(a)) - Number(isFull(b)));
 }
 
@@ -45,7 +50,8 @@ export default function ExplorePage() {
         }
         return true;
       }),
-      state.joins,
+      state.approved,
+      state.removed,
     );
     if (sort === "newest") return [...base].sort((a, b) => postedTime(b) - postedTime(a));
     const scoreOf = (activity: (typeof base)[number]) => {
@@ -58,8 +64,7 @@ export default function ExplorePage() {
       }
     };
     return [...base].sort((a, b) => scoreOf(b) - scoreOf(a));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- postedTime is a stable local helper
-  }, [state.activities, state.joins, state.removed, state.blocked, category, zone, onlyVerified, viewerId, viewer, sort]);
+  }, [state.activities, state.approved, state.removed, state.blocked, category, zone, onlyVerified, viewerId, viewer, sort]);
 
   return (
     <>

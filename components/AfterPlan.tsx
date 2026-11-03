@@ -4,6 +4,7 @@ import { useState } from "react";
 import { t } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 import type { Activity, Locale } from "@/lib/types";
+import { planEndsAt } from "@/lib/format";
 import { Composer } from "@/components/Composer";
 
 const TAGS = ["ontime", "fun", "kind", "focused"] as const;
@@ -16,7 +17,7 @@ export function AfterPlan({ activity, locale }: { activity: Activity; locale: Lo
   const [reviewed, setReviewed] = useState(false);
   const [now] = useState(() => Date.now());
 
-  const finished = Number.isFinite(Date.parse(activity.startsAt)) && Date.parse(activity.startsAt) < now;
+  const finished = Number.isFinite(Date.parse(activity.startsAt)) && planEndsAt(activity.startsAt, activity.durationMin) < now;
   if (!finished) return null;
   const isAuthor = activity.creatorId === viewer.id;
   const involved = isAuthor || (state.approved[activity.id] ?? []).includes(viewer.id) || (state.joins[activity.id] ?? []).includes(viewer.id);

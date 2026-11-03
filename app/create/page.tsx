@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { t } from "@/lib/i18n";
-import { parseFreeText } from "@/lib/engine";
+import { parseFreeText, type ParsedActivity } from "@/lib/engine";
 import { AREAS } from "@/lib/data/areas";
 import { CategoryChips, FieldShell, RulesEditor, Select } from "@/components/RulesEditor";
 import type { Activity, ActivityRules, Category } from "@/lib/types";
@@ -29,13 +29,44 @@ export default function CreatePage() {
   const [startsAt, setStartsAt] = useState("2026-10-31T16:30");
   const [budget, setBudget] = useState(100000);
   const [partySize, setPartySize] = useState(2);
+const [openGroup, setOpenGroup] = useState(false);
+  const [durationMin, setDurationMin] = useState(60);
   const [rules, setRules] = useState<ActivityRules>(() => state.savedRules ?? emptyRules());
   const [remember, setRemember] = useState(!state.savedRules);
   // Fields the user picked by hand; auto-detect never overwrites these.
   const [touched, setTouched] = useState({ category: false, area: false, budget: false, chat: false });
   const fromPreference = Boolean(state.savedRules);
 
-  const detected = parseFreeText(description);
+  const local = parseFreeText(description);
+  const [ai, setAi] = useState<ParsedActivity | null>(null);
+  useEffect(() => {
+    const text = description.trim();
+    if (!text) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const ctrl = new AbortController();
+        const killer = setTimeout(() => ctrl.abort(), 9000);
+        const res = await fetch("/api/ai/parse", {
+          method: "POST",
+          signal: ctrl.signal,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: text.slice(0, 500), locale }),
+        });
+        clearTimeout(killer);
+        if (!res.ok) return;
+        const json = (await res.json()) as { data?: ParsedActivity; source?: string };
+        if (!cancelled && json.source === "ai" && json.data) setAi(json.data);
+      } catch {
+        // ponytail: silent fallback keeps local parse; upgrade path is a subtle "AI bantu" badge.
+      }
+    }, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [description, locale]);
+  const detected = ai ?? local;
   const touch = (key: keyof typeof touched) => setTouched((current) => (current[key] ? current : { ...current, [key]: true }));
   const autoCategory = touched.category ? category : description.trim() ? detected.category : category;
   const autoAreaId = touched.area ? areaId : (description.trim() && detected.areaId ? detected.areaId : areaId);
@@ -59,6 +90,8 @@ export default function CreatePage() {
       budgetMin: Math.round(autoBudget * 0.7),
       budgetMax: autoBudget,
       partySize,
+      openGroup,
+      durationMin,
       source: "form",
       status: "open",
       rules: displayRules,
@@ -165,6 +198,38 @@ export default function CreatePage() {
                   }}
                 />
               </div>
+              <label className="check" style={{ marginBlockStart: "var(--space-sm)" }}>
+                <input type="checkbox" checked={openGroup} onChange={(event) => setOpenGroup(event.target.checked)} />
+                <span className="check__text">
+                  {t(locale, "create.openGroup")}
+                  <span className="field__help">{t(locale, "create.openGroupHelp")}</span>
+                </span>
+              </label>
+            </FieldShell>
+            <FieldShell label={t(locale, "field.duration")} htmlFor="duration">
+              <div className="stepper" role="group" aria-label={t(locale, "field.duration")}>
+                <button
+                  type="button"
+                  className="stepper__btn"
+                  onClick={() => setDurationMin((value) => Math.max(30, value - 30))}
+                  disabled={durationMin <= 30}
+                  aria-label={locale === "en" ? "Shorter" : "Lebih singkat"}
+                >
+                  <ChevronLeft size={18} aria-hidden="true" />
+                </button>
+                <output id="duration" className="stepper__value" aria-live="polite">
+                  {durationMin % 60 === 0 ? `${durationMin / 60} h` : `${durationMin} min`}
+                </output>
+                <button
+                  type="button"
+                  className="stepper__btn"
+                  onClick={() => setDurationMin((value) => Math.min(480, value + 30))}
+                  disabled={durationMin >= 480}
+                  aria-label={locale === "en" ? "Longer" : "Lebih lama"}
+                >
+                  <ChevronRight size={18} aria-hidden="true" />
+                </button>
+              </div>
             </FieldShell>
             <FieldShell label={t(locale, "field.party")} htmlFor="party">
               <div className="stepper" role="group" aria-label={t(locale, "field.party")}>
@@ -172,7 +237,7 @@ export default function CreatePage() {
                   type="button"
                   className="stepper__btn"
                   onClick={() => setPartySize((value) => Math.max(2, value - 1))}
-                  disabled={partySize <= 2}
+                  disabled={openGroup || partySize <= 2}
                   aria-label={locale === "en" ? "One fewer person" : "Kurangi satu orang"}
                 >
                   <ChevronLeft size={18} aria-hidden="true" />
@@ -184,7 +249,7 @@ export default function CreatePage() {
                   type="button"
                   className="stepper__btn"
                   onClick={() => setPartySize((value) => Math.min(4, value + 1))}
-                  disabled={partySize >= 4}
+                  disabled={openGroup || partySize >= 4}
                   aria-label={locale === "en" ? "One more person" : "Tambah satu orang"}
                 >
                   <ChevronRight size={18} aria-hidden="true" />

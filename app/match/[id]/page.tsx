@@ -3,19 +3,20 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { ShieldAlert } from "lucide-react";
-import { useStore } from "@/lib/store";
+import { useSession, useStore } from "@/lib/store";
 import { t } from "@/lib/i18n";
-import { WEIGHTS, bandLabel, composeMatch } from "@/lib/engine";
-import { PERSONAS, USER_BY_ID } from "@/lib/data/users";
+import { composeMatch } from "@/lib/engine";
+import { USER_BY_ID } from "@/lib/data/users";
 import { AREA_BY_ID } from "@/lib/data/areas";
-import { formatDate } from "@/lib/format";
+import { formatDate, planEndsAt } from "@/lib/format";
 import { ScoreRing, VerifiedBadge } from "@/components/ui";
 import { SealedPlan } from "@/components/SealedPlan";
+import { PostCard } from "@/components/PostCard";
+import { visiblePosts } from "@/lib/social";
 import { AfterPlan } from "@/components/AfterPlan";
 
 function RequestButton({ activityId, pickLabel }: { activityId: string; pickLabel: string }) {
-  const { update, viewer } = useStore();
+  const { update, viewer } = useSession();
   const ask = () => {
     update((store) => ({
       joins: {
@@ -41,7 +42,9 @@ function RequestRow({
   requesterId,
   isHost,
   approved,
+  locked,
   viewerId,
+  canSee,
   locale,
 }: {
   activityId: string;
@@ -51,7 +54,9 @@ function RequestRow({
   requesterId: string;
   isHost: boolean;
   approved: boolean;
+  locked: boolean;
   viewerId: string;
+  canSee: boolean;
   locale: "en" | "id";
 }) {
   const { state, update } = useStore();
@@ -101,10 +106,10 @@ function RequestRow({
     <li className="card">
       <div className="row" style={{ justifyContent: "space-between" }}>
         <span className="avatar" aria-hidden="true">
-          {(isHost || isMe ? user?.avatarInitials : `#${index + 1}`) ?? "?"}
+          {(canSee || isMe ? user?.avatarInitials : `#${index + 1}`) ?? "?"}
         </span>
         <span className="stack" style={{ gap: 0, flex: 1, alignItems: "center", textAlign: "center" }}>
-          <strong>{isHost || isMe ? user?.name : `${t(locale, "match.censored")} ${index + 1}`}</strong>
+          <strong>{canSee || isMe ? user?.name : `${t(locale, "match.censored")} ${index + 1}`}</strong>
           {approved ? (
             <span className="tag tag--verified">{t(locale, "match.approved")}</span>
           ) : (
@@ -112,12 +117,12 @@ function RequestRow({
           )}
         </span>
         <span className="row">
-          {isHost && !approved && (
+          {isHost && !approved && !locked && (
             <button type="button" className="btn btn--sm" onClick={() => approve(true)}>
               {t(locale, "match.approve")}
             </button>
           )}
-          {isHost && approved && (
+          {isHost && approved && !locked && (
             <details>
               <summary className="btn btn--quiet btn--sm">{t(locale, "match.manage")}</summary>
               <div className="stack" style={{ marginBlockStart: "var(--space-xs)" }}>
@@ -155,6 +160,7 @@ function RequestRow({
 export default function MatchListPage() {
   const { id } = useParams<{ id: string }>();
   const { state, viewer } = useStore();
+  const [now] = useState(() => Date.now());
   const locale = state.locale;
   const activity = state.activities.find((item) => item.id === id);
   const mine = activity ? activity.creatorId === viewer.id : false;
@@ -166,24 +172,27 @@ export default function MatchListPage() {
   const approvedIds = activity ? (state.approved[activity.id] ?? []) : [];
   const removedIds = activity ? (state.removed[activity.id] ?? []) : [];
   const liveIds = requestIds.filter((rid) => !removedIds.includes(rid));
+  const open = activity ? Boolean(activity.openGroup) : false;
   const spots = activity ? Math.max(activity.partySize - 1, 1) : 1;
-  const group = activity ? activity.rules.mode.value !== "one_on_one" || activity.partySize > 2 : false;
+  const group = activity ? open || activity.rules.mode.value !== "one_on_one" || activity.partySize > 2 : false;
 
   if (!activity) return <p className="muted">{locale === "en" ? "That plan is gone." : "Rencana itu tidak ada."}</p>;
   if (state.verification !== "verified" && !mine) return <SealedPlan activity={activity} locale={locale} />;
 
   const area = AREA_BY_ID.get(activity.areaId);
-  const selected = state.selected[activity.id];
   const poster = USER_BY_ID.get(activity.creatorId) ?? null;
 
   const posterUser = poster ?? viewer;
   const isHost = mine;
   const myReq = !mine && liveIds.includes(viewer.id);
   const myApproved = !mine && approvedIds.includes(viewer.id);
-  const myConfirmed = !mine && (state.confirms[activity.id] ?? []).includes(viewer.id);
   const needCount = group ? spots : 1;
   const approvedCount = approvedIds.filter((rid) => !removedIds.includes(rid)).length;
-  const full = approvedCount >= needCount;
+  const full = !open && approvedCount >= needCount;
+  const started = activity ? (!Number.isNaN(Date.parse(activity.startsAt)) && Date.parse(activity.startsAt) < now) : false;
+  const endsAt = activity ? planEndsAt(activity.startsAt, activity.durationMin) : Number.NaN;
+  const finished = !Number.isNaN(endsAt) && endsAt < now;
+  const joinedIds = started ? approvedIds.filter((rid) => !removedIds.includes(rid)) : liveIds;
 
   return (
     <>
@@ -197,6 +206,11 @@ export default function MatchListPage() {
           <div className="pagehead__text">
             <span className="row" style={{ gap: "var(--space-xs)" }}>
               <span className="tag">{t(locale, `category.${activity.category}`)}</span>
+              {finished ? (
+                <span className="tag tag--plain">{t(locale, "plan.finished")}</span>
+              ) : started ? (
+                <span className="tag tag--accent">{t(locale, "plan.ongoing")}</span>
+              ) : null}
               <span className="tag tag--plain">
                 {area?.name}, {area?.city}
               </span>
@@ -211,7 +225,11 @@ export default function MatchListPage() {
               <span aria-hidden="true">·</span>
               <span>
                 {group
-                  ? locale === "en"
+                    ? open
+                    ? locale === "en"
+                    ? `${approvedCount} joined · ${t(locale, "plan.open")}`
+                    : `${approvedCount} gabung · ${t(locale, "plan.open")}`
+                    : locale === "en"
                     ? `${approvedCount} out of ${spots} joined`
                     : `${approvedCount} dari ${spots} gabung`
                   : locale === "en"
@@ -270,18 +288,18 @@ export default function MatchListPage() {
       <section className="section section--tight">
         <div className="section__head">
           <h2>
-            {t(locale, "match.requests")} ({liveIds.length})
+            {started ? t(locale, "match.joined") : t(locale, "match.requests")} ({started ? joinedIds.length : liveIds.length})
           </h2>
-          <span className="tiny muted">{group ? t(locale, "match.needMore") : t(locale, "match.needOne")}</span>
+          <span className="tiny muted">{started ? (locale === "en" ? `${approvedCount} joined` : `${approvedCount} gabung`) : (group ? t(locale, "match.needMore") : t(locale, "match.needOne"))}</span>
         </div>
 
-      {liveIds.length === 0 ? (
+      {joinedIds.length === 0 ? (
         <div className="well stack">
           <h2>{t(locale, "match.none")}</h2>
         </div>
       ) : (
         <ul className="stack">
-          {liveIds.map((rid, i) => (
+          {joinedIds.map((rid, i) => (
             <RequestRow
               key={rid}
               activityId={activity.id}
@@ -291,14 +309,42 @@ export default function MatchListPage() {
               requesterId={rid}
               isHost={isHost}
               approved={approvedIds.includes(rid)}
+              locked={started}
               viewerId={viewer.id}
+              canSee={isHost || liveIds.includes(viewer.id) || approvedIds.includes(viewer.id)}
               locale={locale}
             />
           ))}
         </ul>
       )}
       </section>
-      <AfterPlan activity={activity} locale={locale} />
+      {(() => {
+          const moments = visiblePosts(state.posts, viewer.id, state.joins)
+            .filter((post) => post.activityId === activity.id)
+            .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+          if (moments.length === 0) return null;
+          return (
+            <section className="section section--tight" aria-label={t(locale, "plan.moments")}>
+              <div className="section__head">
+                <h2>{t(locale, "plan.moments")} ({moments.length})</h2>
+              </div>
+              <div className="threads-box">
+                <div className="threads">
+                  {moments.map((post) => (
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      author={USER_BY_ID.get(post.authorId) ?? null}
+                      activity={activity}
+                      locale={locale}
+                    />
+                  ))}
+                </div>
+              </div>
+            </section>
+          );
+        })()}
+        <AfterPlan activity={activity} locale={locale} />
     </>
   );
 }

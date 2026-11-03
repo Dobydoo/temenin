@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   description:
     "Temenin matches you with a verified activity buddy and keeps names, places and times locked until you are verified too.",
   applicationName: "Temenin",
-  icons: { icon: "/brand/icon-256.png" },
+  icons: { icon: "/brand/icon-256.png", apple: "/brand/icon-256.png" },
 };
 
 export const viewport: Viewport = {
@@ -33,7 +33,7 @@ export const viewport: Viewport = {
   ],
 };
 
-const modeScript = `try{var m=JSON.parse(localStorage.getItem("temenin.state.v2")||"{}");if(m.mode&&m.mode!=="system")document.documentElement.dataset.mode=m.mode;if(m.locale)document.documentElement.lang=m.locale;}catch(e){}`;
+const modeScript = `try{var m=JSON.parse((localStorage.getItem("temenin.state.v6")||localStorage.getItem("temenin.state.v5")||localStorage.getItem("temenin.state.v2")||"{}")||"{}");if(m.mode&&m.mode!=="system")document.documentElement.dataset.mode=m.mode;if(m.locale)document.documentElement.lang=m.locale;}catch(e){}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

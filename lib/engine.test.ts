@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import type { ContactVerdict } from "./engine.ts";
 import assert from "node:assert/strict";
 import { distanceBand, distanceKm, inspectMessage, parseFreeText, rankCandidates, recommendVenues } from "./engine.ts";
 import { AREA_BY_ID } from "./data/areas.ts";
@@ -88,6 +89,58 @@ test("contact details are held until both sides confirm", () => {
   assert.equal(inspectMessage("kita ketemu di depan bioskop", false).held, false);
 });
 
+test("spelled-out numbers using kosong and lapan are held", () => {
+  assert.equal(inspectMessage("nomor aku kosong delapan satu dua tiga empat lima enam tujuh", false).held, true);
+  assert.equal(inspectMessage("kosong lapan satu dua tiga empat lima enam", false).held, true);
+});
+
+test("invisible separators do not defeat the digit scan", () => {
+  const ZWSP = String.fromCharCode(0x200b);
+  const zeroWidth = "081234567890".split("").join(ZWSP);
+  assert.equal(inspectMessage(`hub ${zeroWidth} ya`, false).held, true);
+});
+
+test("possessive platform handles are held", () => {
+  assert.equal(inspectMessage("ig-ku nadia_prameswari", false).held, true);
+  assert.equal(inspectMessage("follow line-ku nadia.p ya", false).held, true);
+  assert.equal(inspectMessage("antre in line with the others", false).held, false);
+});
+
+test("platform abbreviations and handle phrasings are held", () => {
+  assert.equal(inspectMessage("chat gw di tele: nadia_p", false).held, true);
+  assert.equal(inspectMessage("lineid nadia.p", false).held, true);
+  assert.equal(inspectMessage("line-id: nadia_p", false).held, true);
+  assert.equal(inspectMessage("add line gw nadia.p", false).held, true);
+  assert.equal(inspectMessage("line ku nadia_prameswari", false).held, true);
+});
+
+test("platform words inside ordinary prose pass through", () => {
+  assert.equal(inspectMessage("telepon aku kalau sudah sampai", false).held, false);
+  assert.equal(inspectMessage("deadline aku besok pagi", false).held, false);
+  assert.equal(inspectMessage("line kuota habis", false).held, false);
+});
+
+test("emoji separators do not defeat the digit scan", () => {
+  const grin = String.fromCodePoint(0x1f600);
+  const run = "081234567890".split("").join(grin);
+  assert.equal(inspectMessage(`hub ${run} ya`, false).held, true);
+  assert.equal(inspectMessage(`ketemu jam 8${grin}malam di depan`, false).held, false);
+});
+
+test("email addresses are held as contact details", () => {
+  const verdict = inspectMessage("email aku nadia.prameswari@gmail.com ya", false);
+  assert.equal(verdict.held, true);
+  assert.equal(verdict.reason, "social_handle");
+  assert.equal(inspectMessage("kirim ke alamat kantor ya", false).held, false);
+});
+
+test("ordinary plans with numbers and times pass through", () => {
+  assert.equal(inspectMessage("ketemu jam 8 malam di depan", false).held, false);
+  assert.equal(inspectMessage("budget 100 ribuan, patungan 50000", false).held, false);
+  assert.equal(inspectMessage("filmnya mulai 19.30, datang jam 18.00", false).held, false);
+  assert.equal(inspectMessage("my big idea for tonight", false).held, false);
+});
+
 test("free text becomes a draft and reports what it could not read", () => {
   const parsed = parseFreeText("Sabtu sore mau nonton di daerah Tebet, budget 100 ribuan, pengen teman yang asik diajak ngobrol");
   assert.equal(parsed.category, "movie");
@@ -141,4 +194,20 @@ test("the exact venue waits for both confirmations", () => {
   };
   assert.equal(exactVenueVisible(base), false);
   assert.equal(exactVenueVisible({ ...base, confirmedByCandidateAt: "2026-10-30T11:00:00+07:00" }), true);
+});
+
+test("ai safety verdict rides the held channel without touching pattern filter", () => {
+  const verdict: ContactVerdict = { held: true, reason: "ai_safety_check" };
+  assert.equal(verdict.held, true);
+  assert.equal(verdict.reason, "ai_safety_check");
+  assert.equal(inspectMessage("kita ketemu di depan bioskop", false).held, false);
+});
+
+test("venue fallback never leaves the curated list or plan area", () => {
+  const suggestions = recommendVenues(activity(), VENUES, "id");
+  assert.ok(suggestions.length > 0 && suggestions.length <= 3);
+  for (const { venue } of suggestions) {
+    assert.ok(VENUES.some((entry) => entry.id === venue.id));
+    assert.equal(venue.areaId, "tebet");
+  }
 });

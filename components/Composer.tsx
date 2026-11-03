@@ -1,12 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import { Check, ImagePlus, Music2, X } from "lucide-react";
 import { PHOTOS, PHOTO_BY_ID } from "@/lib/data/photos";
 import { SONGS } from "@/lib/data/songs";
-import { t } from "@/lib/i18n";
+import { t, type I18nKey } from "@/lib/i18n";
 import { suggestSongs } from "@/lib/social";
-import { useStore } from "@/lib/store";
+import { useSession } from "@/lib/store";
 import type { Locale, PostVisibility } from "@/lib/types";
 
 type Props = {
@@ -14,13 +15,13 @@ type Props = {
   activityId: string | null;
   areaId: string;
   allowVisibility: boolean;
-  titleKey: string;
-  bodyKey: string;
+  titleKey: I18nKey;
+  bodyKey: I18nKey;
   onPosted?: () => void;
 };
 
 export function Composer({ locale, activityId, areaId, allowVisibility, titleKey, bodyKey, onPosted }: Props) {
-  const { update, viewer } = useStore();
+  const { update, viewer } = useSession();
   const [open, setOpen] = useState(activityId !== null);
   const [body, setBody] = useState("");
   const [photoId, setPhotoId] = useState<string | null>(null);
@@ -104,7 +105,7 @@ export function Composer({ locale, activityId, areaId, allowVisibility, titleKey
 
           {photo && (
             <div className="fb__preview">
-              <img src={photo.src} alt={photo.label} loading="lazy" />
+              <Image src={photo.src} alt={photo.label} width={800} height={600} sizes="(max-width: 640px) 100vw, 560px" loading="lazy" />
               <button
                 type="button"
                 className="fb__remove"
@@ -133,7 +134,7 @@ export function Composer({ locale, activityId, areaId, allowVisibility, titleKey
                     title={item.label}
                     onClick={() => setPhotoId(selected ? null : item.id)}
                   >
-                    <img src={item.src} alt="" loading="lazy" />
+                    <Image src={item.src} alt="" width={144} height={108} sizes="72px" loading="lazy" />
                     {selected && (
                       <span className="fb__check" aria-hidden="true">
                         <Check size={12} />

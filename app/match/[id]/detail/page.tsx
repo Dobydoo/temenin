@@ -4,15 +4,16 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { MapPin, ShieldCheck, Star } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { t } from "@/lib/i18n";
-import { bandLabel, recommendVenues, scoreRows } from "@/lib/engine";
+import { t, type I18nKey } from "@/lib/i18n";
+import { bandLabel, recommendVenues, scoreRows, type ScoreRowKey } from "@/lib/engine";
 import { PERSONAS, USER_BY_ID } from "@/lib/data/users";
 import { VENUES } from "@/lib/data/venues";
 import { AREA_BY_ID } from "@/lib/data/areas";
 import { formatDate } from "@/lib/format";
 import { ScoreRing, VerifiedBadge } from "@/components/ui";
 import { SealedPlan } from "@/components/SealedPlan";
-import { useState } from "react";
+import { MatchReason } from "@/components/MatchReason";
+import { useEffect, useState } from "react";
 
 const CHECK_LABEL: Record<string, { en: string; id: string }> = {
   gender: { en: "Gender fits your preference", id: "Gender sesuai preferensimu" },
@@ -23,13 +24,13 @@ const CHECK_LABEL: Record<string, { en: string; id: string }> = {
   verified: { en: "Identity verified", id: "Identitas terverifikasi" },
 };
 
-const ROW_LABEL: Record<string, string> = {
+const ROW_LABEL = {
   gender: "match.gender",
   interest: "match.interest",
   energy: "match.energyFit",
   context: "match.context",
   trust: "match.trust",
-};
+} satisfies Record<ScoreRowKey, I18nKey>;
 
 export default function MatchDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -38,7 +39,42 @@ export default function MatchDetailPage() {
   const { state, update, viewer, match } = useStore();
   const router = useRouter();
   const locale = state.locale;
+  const [aiVenues, setAiVenues] = useState<{ order: string[]; line: string } | null>(null);
+  const [aiVenueLive, setAiVenueLive] = useState(false);
   const [shared, setShared] = useState(false);
+  const resolvedForAi = match(id, candidateId);
+  const aiAreaId = resolvedForAi?.activity.areaId ?? "";
+  const aiCategory = resolvedForAi?.activity.category ?? "";
+  const aiBudget = resolvedForAi?.activity.budgetMax ?? 0;
+  const aiActId = resolvedForAi?.activity.id ?? "";
+  useEffect(() => {
+    if (!aiActId) return;
+    let cancelled = false;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 9000);
+    fetch("/api/ai/venues", {
+      method: "POST",
+      signal: ctrl.signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ activityId: aiActId, areaId: aiAreaId, category: aiCategory, budgetMax: aiBudget, locale }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        const data = (json as { source?: string; data?: { order?: string[]; line?: string } } | null)?.data;
+        if (!cancelled && json?.source === "ai" && data?.order?.length && data.line?.trim()) {
+          setAiVenues({ order: data.order.slice(0, 3), line: data.line.trim().slice(0, 200) });
+          setAiVenueLive(true);
+        }
+      })
+      .catch(() => {
+        // ponytail: silent fallback keeps curated order; upgrade path is a retry affordance.
+      })
+      .finally(() => clearTimeout(timer));
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [aiActId, aiAreaId, aiCategory, aiBudget, locale]);
 
   const resolved = match(id, candidateId);
 
@@ -73,6 +109,11 @@ export default function MatchDetailPage() {
   const creator = USER_BY_ID.get(activity.creatorId) ?? viewer;
   const rows = scoreRows(current);
   const metRequired = current.checklist.filter((item) => item.required);
+  const byId = new Map(venues.map((entry) => [entry.venue.id, entry]));
+  const orderedVenues =
+    aiVenues && aiVenues.order.length > 0
+      ? aiVenues.order.map((venueId) => byId.get(venueId)).filter((entry) => entry !== undefined)
+      : venues;
 
   const pick = () => {
     const matchId = `${activity.id}:${candidate.id}`;
@@ -170,7 +211,7 @@ export default function MatchDetailPage() {
             <div className="bars">
               {rows.map((row) => (
                 <div className="bar" key={row.key}>
-                  <span>{t(locale, ROW_LABEL[row.key] ?? row.key)}</span>
+                  <span>{t(locale, ROW_LABEL[row.key])}</span>
                   <span className="bar__track" aria-hidden="true">
                     <span
                       className="bar__fill"
@@ -183,7 +224,7 @@ export default function MatchDetailPage() {
                 </div>
               ))}
             </div>
-            <p className="small">{current.explanation[locale]}</p>
+            <MatchReason fallback={current.explanation[locale]} locale={locale} />
           </section>
 
           <section className="card stack">
@@ -220,11 +261,12 @@ export default function MatchDetailPage() {
 
           <section className="card stack">
             <h2>{t(locale, "match.venues")}</h2>
+            {aiVenueLive && aiVenues?.line && <p className="small"><span className="tag tag--accent">{t(locale, "ai.badge")}</span> {aiVenues.line}</p>}
             <p className="small muted">
               {area?.name}, {area?.city}. {formatDate(activity.startsAt, locale)}
             </p>
             <ul className="rows">
-              {venues.map(({ venue, reason }) => (
+              {orderedVenues.map(({ venue, reason }) => (
                 <li key={venue.id}>
                   <span className="stack" style={{ gap: "var(--space-3xs)" }}>
                     <strong>{venue.name}</strong>

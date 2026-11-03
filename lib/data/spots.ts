@@ -1,4 +1,4 @@
-import type { Spot } from "../types";
+import type { Category, Spot } from "../types";
 
 export const SPOTS: Spot[] = [
   { id: "jakarta", name: "Jakarta", region: "DKI Jakarta", country: "Indonesia", lat: -6.2, lng: 106.85 },
@@ -16,7 +16,7 @@ export const SPOT_BY_ID = new Map(SPOTS.map((spot) => [spot.id, spot]));
 export type SpotTrend = {
   spotId: string;
   joins7d: number;
-  category: string;
+  category: Category;
   text: { en: string; id: string };
 };
 

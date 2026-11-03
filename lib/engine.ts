@@ -237,17 +237,27 @@ export function parseFreeText(input: string): ParsedActivity {
   };
 }
 
-export type ContactVerdict = { held: boolean; reason: "phone_pattern" | "social_handle" | null };
+export type ContactVerdict = { held: boolean; reason: "phone_pattern" | "social_handle" | "ai_safety_check" | null };
 
 export function inspectMessage(body: string, meetupConfirmed: boolean): ContactVerdict {
   if (meetupConfirmed) return { held: false, reason: null };
-  const digits = /(?:\+?62|0)\s*8(?:[\s.-]?\d){7,12}/.test(body) || /(?:\d[\s.-]?){9,14}\d/.test(body);
+  // Strip invisible format chars, non-spacing marks, and pictographs so they cannot
+  // split a digit run. Punctuation and symbols stay: removing "+" would join
+  // "100+200" into a false phone run.
+  const text = body.replace(/[\p{Cf}\p{M}\p{Extended_Pictographic}]/gu, "");
+  const digits = /(?:\+?62|0)\s*8(?:[\s.-]?\d){7,12}/.test(text) || /(?:\d[\s.-]?){9,14}\d/.test(text);
   const spelled =
-    /(nol|zero)\s+(satu|dua|tiga|empat|lima|enam|tujuh|delapan|sembilan|one|two|three|four|five|six|seven|eight|nine)([\s.-]+(nol|zero|satu|dua|tiga|empat|lima|enam|tujuh|delapan|sembilan|one|two|three|four|five|six|seven|eight|nine)){3,}/i.test(
-      body,
+    /(nol|zero|kosong)\s+(satu|dua|tiga|empat|lima|enam|tujuh|delapan|lapan|sembilan|one|two|three|four|five|six|seven|eight|nine)([\s.-]+(nol|zero|kosong|satu|dua|tiga|empat|lima|enam|tujuh|delapan|lapan|sembilan|one|two|three|four|five|six|seven|eight|nine)){3,}/i.test(
+      text,
     );
   if (digits || spelled) return { held: true, reason: "phone_pattern" };
-  if (/(^|\s)@[a-z0-9._]{3,}|\b(ig|insta|instagram|wa|whatsapp|telegram|line id)\b\s*[:=]?\s*[\w.@]{3,}/i.test(body)) {
+  // Bare "line" stays out: too common in ordinary prose ("in line with"); only qualified
+  // "line" phrasings trigger. Email rides the social_handle reason: no enum variant exists.
+  if (
+    /(^|\s)@[a-z0-9._]{3,}|\b(ig|insta|instagram|wa|whatsapp|tele(?:gram)?|line\s*-?\s*id)\b(-ku)?\s*[:=]?\s*[\w.@]{3,}|\bline-ku\s*[:=]?\s*[\w.@]{3,}|\bline\s*(ku|gue|gw|aku)\b\s*[:=]?\s*[\w.@]{3,}|[\w.+-]+@[\w-]+(?:\.[\w-]+)+/i.test(
+      text,
+    )
+  ) {
     return { held: true, reason: "social_handle" };
   }
   return { held: false, reason: null };
@@ -271,8 +281,10 @@ export function recommendVenues(activity: Activity, venues: Venue[], locale: Loc
     }));
 }
 
-export function scoreRows(match: Match): { key: keyof typeof WEIGHTS; value: number; weight: number }[] {
-  return (Object.keys(WEIGHTS) as (keyof typeof WEIGHTS)[]).map((key) => ({
+export type ScoreRowKey = keyof typeof WEIGHTS;
+
+export function scoreRows(match: Match): { key: ScoreRowKey; value: number; weight: number }[] {
+  return (Object.keys(WEIGHTS) as ScoreRowKey[]).map((key) => ({
     key,
     value: match.scores[key],
     weight: WEIGHTS[key],

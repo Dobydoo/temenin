@@ -3,13 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Compass, Home, MessageCircle, PenLine, ShieldCheck } from "lucide-react";
+import { Compass, Home, MessageCircle, PenLine, ShieldCheck, type LucideIcon } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { t } from "@/lib/i18n";
+import { t, type I18nKey } from "@/lib/i18n";
 import { UserMenu } from "@/components/UserMenu";
 import { Gate } from "@/components/Gate";
 
-const BOTTOM = [
+const BOTTOM: { href: string; key: I18nKey; icon: LucideIcon; create?: boolean }[] = [
   { href: "/", key: "nav.home", icon: Home },
   { href: "/explore", key: "nav.explore", icon: Compass },
   { href: "/create", key: "nav.create", icon: PenLine, create: true },
@@ -62,7 +62,7 @@ export function Chrome({ children }: { children: React.ReactNode }) {
               );
             })}
             <li>
-              <UserMenu variant="nav" label={t(locale, "nav.you")} />
+              <UserMenu key={pathname} variant="nav" label={t(locale, "nav.you")} />
             </li>
           </ul>
         </nav>

@@ -30,9 +30,12 @@ export function PlanCard({ activity, creator, locale, viewerVerified, own = fals
   const when = view.startsAt ? formatDate(view.startsAt, locale) : "";
   const posted = activity.createdAt ? timeAgo(activity.createdAt, locale) : "";
   const { state, viewer } = useStore();
-  const joined = state.joins[activity.id]?.length ?? 0;
+  const removedIds = state.removed[activity.id] ?? [];
+  const joined = (state.approved[activity.id] ?? []).filter((rid) => !removedIds.includes(rid)).length;
+  const open = Boolean(activity.openGroup);
   const spots = Math.max(activity.partySize - 1, 1);
-  const full = joined >= spots;
+  const group = open || activity.rules.mode.value !== "one_on_one" || activity.partySize > 2;
+  const full = !open && joined >= (group ? spots : 1);
   const hostScore = useMemo(() => {
     try {
       const host = creator ?? (USER_BY_ID.get(activity.creatorId) ?? null);
@@ -60,7 +63,7 @@ export function PlanCard({ activity, creator, locale, viewerVerified, own = fals
         <span className="row" style={{ flexDirection: "column", alignItems: "flex-end", gap: 0 }}>
           {posted && <span className="tiny muted">{posted}</span>}
           <span className="tiny muted">
-            {locale === "en" ? `${joined} out of ${spots} joined` : `${joined} dari ${spots} gabung`}
+            {group ? (open ? (locale === "en" ? `${joined} joined · ${t(locale, "plan.open")}` : `${joined} gabung · ${t(locale, "plan.open")}`) : (locale === "en" ? `${joined} out of ${spots} joined` : `${joined} dari ${spots} gabung`)) : (locale === "en" ? "Needs 1 temen" : "Butuh 1 temen")}
           </span>
         </span>
       </div>

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { LogOut, Moon, ShieldCheck, Sun, UserRound, X } from "lucide-react";
 import { useStore } from "@/lib/store";
@@ -40,14 +39,9 @@ function GenderIcon({ female, label }: { female: boolean; label: string }) {
 
 export function UserMenu({ variant = "avatar", label }: { variant?: "avatar" | "nav"; label?: string }) {
   const { state, viewer, update, logout } = useStore();
-  const pathname = usePathname();
   const locale = state.locale;
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
 
   useEffect(() => {
     if (!open) return;

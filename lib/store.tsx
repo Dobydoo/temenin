@@ -4,63 +4,16 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type {
   Activity,
   ActivityRules,
-  AuthorReview,
   ChatLevel,
-  Checkin,
-  Gender,
-  InterestId,
-  Locale,
   Match,
-  Meetup,
-  Message,
-  Post,
-  Review,
+  State,
   User,
-  VerificationStatus,
 } from "./types";
 import { PERSONAS, USER_BY_ID, VIEWER } from "./data/users";
 import { GENERATED_BOARD, GENERATED_JOINS } from "./data/board";
 import { SEED_AUTHOR_REVIEWS, SEED_POSTS } from "./data/posts";
 import { composeMatch, rankCandidates } from "./engine";
-
-export type Mode = "system" | "light" | "dark";
-
-export type ViewerProfile = {
-  name: string;
-  gender: Gender;
-  birthDate: string;
-  areaId: string;
-  mbti: string | null;
-  interests: InterestId[];
-  energyProfile: User["energyProfile"];
-  aboutMe: string;
-};
-
-export type State = {
-  viewerId: string | null;
-  locale: Locale;
-  mode: Mode;
-  verification: VerificationStatus;
-  profile: ViewerProfile;
-  activities: Activity[];
-  savedRules: ActivityRules | null;
-  selected: Record<string, string>;
-  joins: Record<string, string[]>;
-  approved: Record<string, string[]>;
-  confirms: Record<string, string[]>;
-  removed: Record<string, string[]>;
-  blocked: Record<string, string[]>;
-  reported: Record<string, string[]>;
-  hiddenPlans: Record<string, string[]>;
-  messages: Message[];
-  meetups: Meetup[];
-  checkins: Checkin[];
-  reviews: Review[];
-  planShared: Record<string, boolean>;
-  posts: Post[];
-  following: string[];
-  authorReviews: AuthorReview[];
-};
+import { LEGACY_KEYS, STORAGE_KEY, readStoredState } from "./storage";
 
 export type ResolvedMatch = {
   activity: Activity;
@@ -138,10 +91,10 @@ const SEED_BOARD: Activity[] = [
     venueName: null,
     budgetMin: 30000,
     budgetMax: 60000,
-    partySize: 2,
+    partySize: 4,
     source: "form",
     status: "open",
-    rules: { ...baseRules("quiet"), mode: { value: "one_on_one", required: true } },
+    rules: { ...baseRules("quiet"), mode: { value: "small_group", required: true } },
   },
   {
     id: "a-hanif-music",
@@ -188,16 +141,88 @@ const SEED_BOARD: Activity[] = [
     status: "open",
     rules: baseRules("moderate"),
   },
+    {
+      id: "a-rani-sore",
+      creatorId: "u-rani",
+      category: "sports",
+      description: "Lari sore keliling Kemang, pace santai, tutup dengan kopi.",
+      startsAt: "2026-10-31T15:00:00+07:00",
+      durationMin: 180,
+      areaId: "kemang",
+      venueName: null,
+      budgetMin: 20000,
+      budgetMax: 50000,
+      partySize: 4,
+      source: "form",
+      status: "open",
+      rules: { ...baseRules("moderate"), mode: { value: "small_group", required: false } },
+    },
+    {
+      id: "a-hanif-gig",
+      creatorId: "u-hanif",
+      category: "music",
+      description: "Nonton gig bareng di Kelapa Gading, grup terbuka buat siapa aja yang gas.",
+      startsAt: "2026-11-01T19:00:00+07:00",
+      durationMin: 180,
+      areaId: "kelapa-gading",
+      venueName: null,
+      budgetMin: 100000,
+      budgetMax: 200000,
+      partySize: 6,
+      openGroup: true,
+      source: "form",
+      status: "open",
+      rules: { ...baseRules("chatty"), mode: { value: "small_group", required: false } },
+    },
+    {
+      id: "a-reza-futsal",
+      creatorId: "u-reza",
+      category: "sports",
+      description: "Sparing futsal di Bekasi Barat, butuh dua orang lagi.",
+      startsAt: "2026-11-02T20:00:00+07:00",
+      durationMin: 120,
+      areaId: "bekasi-barat",
+      venueName: null,
+      budgetMin: 30000,
+      budgetMax: 60000,
+      partySize: 4,
+      source: "form",
+      status: "open",
+      rules: { ...baseRules("moderate"), mode: { value: "small_group", required: false } },
+    },
+    {
+      id: "a-tari-sketch",
+      creatorId: "u-tari",
+      category: "other",
+      description: "Sketsa bareng di Taman Menteng, alat bawa sendiri.",
+      startsAt: "2026-11-02T09:00:00+07:00",
+      durationMin: 120,
+      areaId: "menteng",
+      venueName: null,
+      budgetMin: 0,
+      budgetMax: 30000,
+      partySize: 2,
+      source: "form",
+      status: "open",
+      rules: { ...baseRules("quiet"), mode: { value: "one_on_one", required: false } },
+    }
 ];
 
 const SEED_JOINS: Record<string, string[]> = {
   "a-nadia-tebet": ["u-arif"],
-  "a-sekar-coffee": ["u-rani"],
-  "a-lia-study": ["u-putri"],
+  "a-sekar-coffee": ["u-rani", "u-nadia"],
+  "a-lia-study": ["u-putri", "u-nadia"],
   "a-hanif-music": ["u-eko"],
+  "a-rani-sore": ["u-sekar", "u-eko", "u-bagas", "u-dim"],
+  "a-hanif-gig": ["u-eko", "u-arif", "u-bagas"],
+  "a-reza-futsal": ["u-eko"],
   ...GENERATED_JOINS,
 };
 
+// ponytail: demo anchor keeps every timing state (ongoing/upcoming/finished) alive; whole seed slides with wall clock.
+const SEED_ANCHOR = Date.parse("2026-10-31T12:00:00+07:00");
+const SEED_OFFSET = Date.now() - SEED_ANCHOR;
+const shiftSeed = (iso: string) => new Date(Date.parse(iso) + SEED_OFFSET).toISOString();
 const INITIAL: State = {
   viewerId: null,
   locale: "en",
@@ -215,15 +240,16 @@ const INITIAL: State = {
   },
   // ponytail: seeds carry no real posted timestamps; stagger createdAt over ~11 days so Newest sort and ages look alive.
   activities: [...SEED_BOARD, ...GENERATED_BOARD].map((activity, index, list) => ({
-    ...activity,
-    createdAt: activity.createdAt ?? new Date(Date.now() - (list.length - 1 - index) * 100 * 60e3).toISOString(),
+...activity,
+startsAt: shiftSeed(activity.startsAt),
+createdAt: activity.createdAt ?? new Date(Date.now() - (list.length - 1 - index) * 100 * 60e3).toISOString(),
   })),
   savedRules: null,
   selected: {},
   joins: SEED_JOINS,
-  approved: { "a-sekar-coffee": ["u-rani"], "a-lia-study": ["u-putri"] },
+  approved: { "a-sekar-coffee": ["u-rani"], "a-lia-study": ["u-putri"], "a-rani-sore": ["u-sekar", "u-eko"], "a-hanif-gig": ["u-eko", "u-arif", "u-bagas"] },
   confirms: { "a-sekar-coffee": ["u-rani"] },
-  removed: {},
+  removed: { "a-rani-sore": ["u-dim"] },
   blocked: {},
   reported: {},
   hiddenPlans: {},
@@ -232,14 +258,28 @@ const INITIAL: State = {
   checkins: [],
   reviews: [],
   planShared: {},
-  posts: SEED_POSTS,
-  following: [],
+  posts: SEED_POSTS.map((post) => ({ ...post, createdAt: shiftSeed(post.createdAt) })),
+  following: ["u-sekar", "u-arif", "u-lia", "u-rani", "u-hanif"],
   authorReviews: SEED_AUTHOR_REVIEWS,
 };
 
-const KEY = "temenin.state.v2";
+export type Session = {
+  hydrate: boolean;
+  update: Store["update"];
+  login: Store["login"];
+  logout: Store["logout"];
+  viewer: User;
+};
 
-const Ctx = createContext<Store | null>(null);
+type Board = {
+  state: State;
+  match: Store["match"];
+};
+
+// Split contexts: board state changes on every post/join/message, while the
+// session (viewer + actions) stays stable, so action-only components skip renders.
+const StateCtx = createContext<Board | null>(null);
+const SessionCtx = createContext<Session | null>(null);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<State>(INITIAL);
@@ -248,22 +288,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // Stored state can only be read after mount: server markup renders INITIAL, so a
   // lazy initializer would hydrate mismatched text.
   useEffect(() => {
-    const raw = window.localStorage.getItem(KEY);
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw) as Partial<State>;
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time hydration from localStorage
-        setState((current) => ({ ...current, ...parsed }));
-      } catch {
-        window.localStorage.removeItem(KEY);
-      }
+    const stored = readStoredState((key) => window.localStorage.getItem(key));
+    if (stored) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time hydration from localStorage
+      setState((current) => ({ ...current, ...stored }));
+      for (const key of LEGACY_KEYS) window.localStorage.removeItem(key);
+    } else if (window.localStorage.getItem(STORAGE_KEY)) {
+      window.localStorage.removeItem(STORAGE_KEY);
     }
     setHydrate(true);
   }, []);
 
   useEffect(() => {
     if (!hydrate) return;
-    window.localStorage.setItem(KEY, JSON.stringify(state));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     const root = document.documentElement;
     if (state.mode === "system") delete root.dataset.mode;
     else root.dataset.mode = state.mode;
@@ -329,11 +367,30 @@ const match = useCallback(
     [state.activities, viewer],
   );
 
-  return <Ctx.Provider value={{ state, hydrate, update, login, logout, viewer, match }}>{children}</Ctx.Provider>;
+  const board = useMemo<Board>(() => ({ state, match }), [state, match]);
+  const session = useMemo<Session>(() => ({ hydrate, update, login, logout, viewer }), [hydrate, update, login, logout, viewer]);
+
+  return (
+    <StateCtx.Provider value={board}>
+      <SessionCtx.Provider value={session}>{children}</SessionCtx.Provider>
+    </StateCtx.Provider>
+  );
+}
+
+function useBoard(): Board {
+  const board = useContext(StateCtx);
+  if (!board) throw new Error("useStore must be used inside StoreProvider");
+  return board;
+}
+
+export function useSession(): Session {
+  const session = useContext(SessionCtx);
+  if (!session) throw new Error("useSession must be used inside StoreProvider");
+  return session;
 }
 
 export function useStore(): Store {
-  const store = useContext(Ctx);
-  if (!store) throw new Error("useStore must be used inside StoreProvider");
-  return store;
+  const { state, match } = useBoard();
+  const { hydrate, update, login, logout, viewer } = useSession();
+  return { state, hydrate, update, login, logout, viewer, match };
 }

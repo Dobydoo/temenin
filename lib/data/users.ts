@@ -326,4 +326,8 @@ export const TRUSTED_CONTACT_SEED: TrustedContact = {
   destination: "+62 812 0000 1188",
 };
 
+// ponytail: one unverified host demos sealed cards, filter + SealedPlan.
+const rezaSeed = PERSONAS.find((u) => u.id === "u-reza");
+if (rezaSeed) rezaSeed.verification = "unverified";
+
 export const USER_BY_ID = new Map<string, User>([VIEWER, ...PERSONAS].map((user) => [user.id, user]));
