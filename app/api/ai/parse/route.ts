@@ -11,11 +11,13 @@ const Body = z.object({
   locale: z.enum(["en", "id"]).optional().default("id"),
 });
 
+// Nullable where the text may not say: a non-null field forces the model to
+// invent a value, and the deterministic parse already owns those defaults.
 const AiResult = z.object({
   category: z.enum(["movie", "coffee", "study", "shopping", "sports", "food", "music", "other"]),
   areaId: z.string().nullable(),
-  budgetMax: z.number().int().min(0).max(10000000),
-  chatLevel: z.enum(["quiet", "moderate", "chatty"]),
+  budgetMax: z.number().int().min(0).max(10000000).nullable(),
+  chatLevel: z.enum(["quiet", "moderate", "chatty"]).nullable(),
 });
 
 const limited = createRateLimiter(20, 60_000);
@@ -27,9 +29,9 @@ function merge(value: z.infer<typeof AiResult>, fallback: ParsedActivity): Parse
   return {
     category: value.category as Category,
     areaId,
-    budgetMax: value.budgetMax,
+    budgetMax: value.budgetMax ?? fallback.budgetMax,
     dayHint: fallback.dayHint,
-    chatLevel: value.chatLevel as ChatLevel,
+    chatLevel: (value.chatLevel ?? fallback.chatLevel) as ChatLevel,
     missing: [...(value.category === "other" ? ["category"] : []), ...(areaId ? [] : ["area"])],
   };
 }
@@ -45,7 +47,7 @@ export async function POST(req: Request) {
 
   const outcome = await askMetaModel({
     tag: "ai.parse",
-    developer: `Parse an Indonesian activity plan into JSON. Known area ids: ${[...AREA_IDS].join(", ")}. Use the closest known area id, or null when the text names no place. budgetMax is a rupiah integer; "100 ribuan" means 100000. chatLevel reflects how much conversation the plan implies.`,
+    developer: `Parse an Indonesian activity plan into JSON. Known area ids: ${[...AREA_IDS].join(", ")}. Use the closest known area id, or null when the text names no place. budgetMax is a rupiah integer; "100 ribuan" means 100000. Set budgetMax and chatLevel to null when the text does not say; never guess them.`,
     user: body.data.text.slice(0, 500),
     schema: AiResult,
     schemaName: "ParsedActivity",
