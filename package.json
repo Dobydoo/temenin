@@ -12,6 +12,9 @@
     "smoke": "node scripts/smoke.mjs",
     "globe:dots": "node scripts/generate-globe-dots.mjs"
   },
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "dependencies": {
     "lucide-react": "^0.469.0",
     "next": "16.4.3",
